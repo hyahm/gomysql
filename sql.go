@@ -9,11 +9,18 @@ import (
 	"strings"
 )
 
-var conn map[string]*sql.DB
-var conf map[string]string
+//var conn map[string]*sql.DB
+var client map[string]*db
+
+type db struct {
+	conn *sql.DB
+	conf string
+}
 
 var CONNECTDBERROR = errors.New("can't connect db")
 var NotConnetKey = errors.New("can't found connect key")
+var NotInitERROR = errors.New("not save conf")
+var TAGERROR = errors.New("not found tag")
 
 type Sqlconfig struct {
 	UserName string
@@ -23,25 +30,20 @@ type Sqlconfig struct {
 	DbName   string
 }
 
-func SaveConf(tag string, c *Sqlconfig) {
-	if conf == nil {
-		conf = make(map[string]string, 0)
+// 传入自定义连接字符串
+func SaveStringConfAndConn(tag string, conf string) error {
+	//判断是否是空map
+	if client == nil {
+		client = make(map[string]*db, 0)
 	}
-
-	connstring := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4",
-		c.UserName, c.Password, c.Host, c.Port, c.DbName,
-	)
 	if tag == "" {
-		conf[c.DbName] = connstring
-	} else {
-		conf[tag] = connstring
+		return TAGERROR
 	}
+	// 保存到配置
+	client[tag].conf = conf
 
-}
 
-func ConnDB(tag string) error {
-
-	db, err := sql.Open("mysql", conf[tag])
+	db, err := sql.Open("mysql", client[tag].conf)
 	if err != nil {
 		return err
 	}
@@ -49,54 +51,85 @@ func ConnDB(tag string) error {
 	if err = db.Ping(); err != nil {
 		return err
 	}
-	if conn == nil {
-		conn = make(map[string]*sql.DB, 0)
+	// 保存连接
+	client[tag].conn = db
+	return nil
+}
+
+// 如果tag 是空的, 那么默认dbname
+func SaveConfAndConn(tag string, c *Sqlconfig) error {
+	//判断是否是空map
+	if client == nil {
+		client = make(map[string]*db, 0)
+	}
+	connstring := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4",
+		c.UserName, c.Password, c.Host, c.Port, c.DbName,
+	)
+	if tag == "" {
+		client[c.DbName].conf = connstring
+	} else {
+		client[tag].conf = connstring
 	}
 
-	conn[tag] = db
+	db, err := sql.Open("mysql", client[tag].conf)
+	if err != nil {
+		return err
+	}
+
+	if err = db.Ping(); err != nil {
+		return err
+	}
+	client[tag].conn = db
 	return nil
+}
+
+func ConnDB(tag string) error {
+
+
+
 }
 
 
 func GetConnections(tag string) int {
-	return conn[tag].Stats().OpenConnections
+	return client[tag].conn.Stats().OpenConnections
 }
 
 func Update(tag,cmd string, args ...interface{}) (sql.Result, error) {
-	if _, ok := conn[tag]; !ok {
+	if _, ok := client[tag]; !ok {
 		return nil, NotConnetKey
 	}
-	if conn[tag] == nil {
+	if client[tag].conn == nil {
+		// 重连
 		if err := ConnDB(tag); err != nil {
 			panic(err)
 		}
 	}
-	if err := conn[tag].Ping(); err != nil {
+	if err := client[tag].conn.Ping(); err != nil {
 		return nil, err
 	}
-	return conn[tag].Exec(cmd, args...)
+	return client[tag].conn.Exec(cmd, args...)
 
 }
 
 func Insert(tag,cmd string, args ...interface{}) (sql.Result, error) {
-	if _, ok := conn[tag]; !ok {
+	if _, ok := client[tag]; !ok {
 		return nil, NotConnetKey
 	}
-	if conn[tag] == nil {
+	if client[tag].conn == nil {
 		if err := ConnDB(tag); err != nil {
 			panic(err)
 		}
 	}
-	return conn[tag].Exec(cmd, args...)
+	return client[tag].conn.Exec(cmd, args...)
 }
 
 
 func InsertMany(tag,cmd string, args []interface{}) (sql.Result, error) {
 
-	if _, ok := conn[tag]; !ok {
+	if _, ok := client[tag]; !ok {
 		return nil, NotConnetKey
 	}
-	if conn[tag] == nil {
+	if client[tag].conn == nil {
 		if err := ConnDB(tag); err != nil {
 			panic(err)
 		}
@@ -146,36 +179,36 @@ func InsertMany(tag,cmd string, args []interface{}) (sql.Result, error) {
 }
 
 func GetRows(tag,cmd string, args ...interface{}) (*sql.Rows, error) {
-	if _, ok := conn[tag]; !ok {
+	if _, ok := client[tag]; !ok {
 		return nil, NotConnetKey
 	}
-	if conn[tag] == nil {
+	if client[tag].conn == nil {
 		if err := ConnDB(tag); err != nil {
 			panic(err)
 		}
 	}
-	return conn[tag].Query(cmd, args...)
+	return client[tag].conn.Query(cmd, args...)
 
 }
 
 func Close(tag string) {
 	//存在并且不为空才关闭
-	if _, ok := conn[tag]; ok && conn[tag] != nil {
-		conn[tag].Close()
+	if _, ok := client[tag]; ok && client[tag] != nil {
+		client[tag].conn.Close()
 	}
 
 }
 
 func GetOne(tag,cmd string, args ...interface{}) *sql.Row {
-	if _, ok := conn[tag]; !ok {
+	if _, ok := client[tag]; !ok {
 		panic(NotConnetKey)
 	}
-	if conn[tag] == nil {
+	if client[tag].conn == nil {
 		if err := ConnDB(tag); err != nil {
 			panic(err)
 		}
 	}
-	return conn[tag].QueryRow(cmd, args...)
+	return client[tag].conn.QueryRow(cmd, args...)
 }
 
 // 还原sql
