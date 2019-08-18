@@ -4,7 +4,7 @@ import (
 	"database/sql"
 )
 
-type driver interface {
+type MsqlDb interface {
 	connDB() error
 	ping() bool
 

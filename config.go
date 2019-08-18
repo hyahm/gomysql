@@ -17,7 +17,7 @@ type Sqlconfig struct {
 func SaveConf(tag string, c *Sqlconfig) error {
 	//判断是否是空map
 	if client == nil {
-		client = make(map[string]*db, 0)
+		client = make(map[string]*Db, 0)
 	}
 	connstring := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4",
 		c.UserName, c.Password, c.Host, c.Port, c.DbName,
@@ -36,7 +36,7 @@ func SaveConf(tag string, c *Sqlconfig) error {
 	if tag == "" {
 		tag = c.DbName
 	}
-	d := &db {
+	d := &Db {
 		conn: conn,
 		conf: connstring,
 		key:tag,

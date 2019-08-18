@@ -11,16 +11,16 @@ import (
 )
 
 //var conn map[string]*sql.DB
-var client map[string]*db
+var client map[string]*Db
 
-type db struct {
+type Db struct {
 	conn *sql.DB
 	conf string
 	key string
 	Ctx context.Context
 }
 
-func GetDb(tag string) (*db, error) {
+func GetDb(tag string) (*Db, error) {
 	if client == nil {
 		return nil, NotInitERROR
 	}
@@ -30,7 +30,7 @@ func GetDb(tag string) (*db, error) {
 	return client[tag],nil
 }
 
-func (d *db)connDB() error {
+func (d *Db)connDB() error {
 	db, err := sql.Open("mysql", client[d.key].conf)
 	if err != nil {
 		return err
@@ -44,11 +44,11 @@ func (d *db)connDB() error {
 }
 
 
-func (d *db)GetConnections() int {
+func (d *Db)GetConnections() int {
 	return d.conn.Stats().OpenConnections
 }
 
-func (d *db)ping() bool {
+func (d *Db)ping() bool {
 	if err := d.conn.Ping(); err != nil {
 		return false
 	}
@@ -56,7 +56,7 @@ func (d *db)ping() bool {
 }
 
 
-func (d *db)Update(cmd string, args ...interface{}) (int64, error) {
+func (d *Db)Update(cmd string, args ...interface{}) (int64, error) {
 	if !d.ping() {
 		// 重连
 		if err := d.connDB(); err != nil {
@@ -68,10 +68,24 @@ func (d *db)Update(cmd string, args ...interface{}) (int64, error) {
 		return 0, err
 	}
 	return result.RowsAffected()
-
 }
 
-func (d *db)Insert(cmd string, args ...interface{}) (int64, error) {
+func (d *Db)Delete(cmd string, args ...interface{}) (int64, error) {
+	//if !d.ping() {
+	//	// 重连
+	//	if err := d.connDB(); err != nil {
+	//		panic(err)
+	//	}
+	//}
+	//result, err :=  d.conn.ExecContext(d.Ctx, cmd, args...)
+	//if err != nil {
+	//	return 0, err
+	//}
+	return d.Update(cmd, args)
+}
+
+
+func (d *Db)Insert(cmd string, args ...interface{}) (int64, error) {
 	if !d.ping() {
 		// 重连
 		if err := d.connDB(); err != nil {
@@ -86,7 +100,7 @@ func (d *db)Insert(cmd string, args ...interface{}) (int64, error) {
 }
 
 
-func (d *db)InsertMany(cmd string, args []interface{}) (int64, error) {
+func (d *Db)InsertMany(cmd string, args []interface{}) (int64, error) {
 
 	if !d.ping() {
 		// 重连
@@ -138,7 +152,7 @@ func (d *db)InsertMany(cmd string, args []interface{}) (int64, error) {
 	return d.Insert(cmd, args...)
 }
 
-func (d *db)GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
+func (d *Db)GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 	if !d.ping() {
 		if err := d.connDB(); err != nil {
 			panic(err)
@@ -148,13 +162,13 @@ func (d *db)GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 
 }
 
-func (d *db)Close() error {
+func (d *Db)Close() error {
 	//存在并且不为空才关闭
 	return d.conn.Close()
 
 }
 
-func (d *db)GetOne(cmd string, args ...interface{}) *sql.Row {
+func (d *Db)GetOne(cmd string, args ...interface{}) *sql.Row {
 	if !d.ping() {
 		if err := d.connDB(); err != nil {
 			panic(err)

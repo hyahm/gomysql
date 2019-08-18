@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-type tx struct {
+type Tx struct {
 	tx *sql.Tx
 	key string
 	db *sql.DB
@@ -15,7 +15,7 @@ type tx struct {
 	Ctx context.Context
 }
 
-func GetTx(tag string) (*tx, error) {
+func GetTx(tag string) (*Tx, error) {
 	if client == nil {
 		return nil, NotInitERROR
 	}
@@ -28,7 +28,7 @@ func GetTx(tag string) (*tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	t := &tx {
+	t := &Tx {
 		tx: txc,
 		key: tag,
 		Ctx: context.Background(),
@@ -38,14 +38,14 @@ func GetTx(tag string) (*tx, error) {
 	return t,nil
 }
 
-func (t *tx) ping() bool {
+func (t *Tx) ping() bool {
 	if err := t.db.Ping(); err != nil {
 		return false
 	}
 	return true
 }
 
-func (t *tx) connDb() error {
+func (t *Tx) connDb() error {
 	// 先要连接db, 然后才连接tx
 	db, err := sql.Open("mysql", t.conf)
 	if err != nil {
@@ -63,7 +63,7 @@ func (t *tx) connDb() error {
 	return nil
 }
 
-func (t *tx)Update(cmd string, args ...interface{}) (int64, error) {
+func (t *Tx)Update(cmd string, args ...interface{}) (int64, error) {
 
 	if !t.ping() {
 		// 重连
@@ -79,7 +79,7 @@ func (t *tx)Update(cmd string, args ...interface{}) (int64, error) {
 
 }
 
-func (t *tx)Insert(cmd string, args ...interface{}) (int64, error) {
+func (t *Tx)Insert(cmd string, args ...interface{}) (int64, error) {
 	if !t.ping() {
 		// 重连
 		if err := t.connDb(); err != nil {
@@ -94,7 +94,7 @@ func (t *tx)Insert(cmd string, args ...interface{}) (int64, error) {
 }
 
 
-func (t *tx)InsertMany(cmd string, args []interface{}) (int64, error) {
+func (t *Tx)InsertMany(cmd string, args []interface{}) (int64, error) {
 
 	if !t.ping() {
 		// 重连
@@ -146,7 +146,7 @@ func (t *tx)InsertMany(cmd string, args []interface{}) (int64, error) {
 	return t.Insert(cmd, args...)
 }
 
-func (t *tx)GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
+func (t *Tx)GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 	if !t.ping() {
 		if err := t.connDb(); err != nil {
 			panic(err)
@@ -156,21 +156,21 @@ func (t *tx)GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 
 }
 
-func (t *tx)Commit() error {
+func (t *Tx)Commit() error {
 	//存在并且不为空才关闭
 	return t.tx.Commit()
 }
 
-func (t *tx)RollBack() error {
+func (t *Tx)RollBack() error {
 	return t.tx.Rollback()
 }
 
-func (t *tx)Close() error {
+func (t *Tx)Close() error {
 	//存在并且不为空才关闭
 	return t.db.Close()
 }
 
-func (t *tx)GetOne(cmd string, args ...interface{}) *sql.Row {
+func (t *Tx)GetOne(cmd string, args ...interface{}) *sql.Row {
 	if !t.ping() {
 		if err := t.connDb(); err != nil {
 			panic(err)
