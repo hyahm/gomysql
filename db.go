@@ -132,7 +132,7 @@ func (d *Db)InsertMany(cmd string, args []interface{}) (int64, error) {
 	value := cmd[tmp_index+start_index: end_index+1]
 	//查看一行数据有多少列
 	column := 0
-	for _, v := range strings.Split(value, ",") {
+	for _, v := range strings.Split(value[1:len(value)-1], ",") {
 		opt := strings.Trim(v, " ")
 		if opt == "?" {
 			column++
