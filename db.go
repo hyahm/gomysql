@@ -71,17 +71,7 @@ func (d *Db)Update(cmd string, args ...interface{}) (int64, error) {
 }
 
 func (d *Db)Delete(cmd string, args ...interface{}) (int64, error) {
-	//if !d.ping() {
-	//	// 重连
-	//	if err := d.connDB(); err != nil {
-	//		panic(err)
-	//	}
-	//}
-	//result, err :=  d.conn.ExecContext(d.Ctx, cmd, args...)
-	//if err != nil {
-	//	return 0, err
-	//}
-	return d.Update(cmd, args)
+	return d.Update(cmd, args...)
 }
 
 
