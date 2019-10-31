@@ -87,6 +87,7 @@ func (d *Db)Insert(cmd string, args ...interface{}) (int64, error) {
 		return 0, err
 	}
 	return result.LastInsertId()
+	//return 0, nil
 }
 
 

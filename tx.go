@@ -23,19 +23,21 @@ func GetTx(tag string) (*Tx, error) {
 		return nil, TAGERROR
 	}
 
-
-	txc, err := client[tag].conn.Begin()
-	if err != nil {
-		return nil, err
-	}
 	t := &Tx {
-		tx: txc,
 		key: tag,
 		Ctx: context.Background(),
 		conf: client[tag].conf,
 		db: client[tag].conn,
 	}
 	return t,nil
+}
+
+func (t *Tx) Begin() (err error) {
+	t.tx, err = t.db.Begin()
+	if err != nil {
+		return
+	}
+	return
 }
 
 func (t *Tx) ping() bool {
