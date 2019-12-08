@@ -24,9 +24,12 @@ func main() {
   	// 保存配置到配置文件, 保存再map 中
 	gomysql.SaveConf("x7", Conf) 
   	// 连接指定key的配置文件, 保存再map 中
-	gomysql.ConnDB("x7")
+	x7 ,err = gomysql.ConnDB("x7")
+	if err != nil {
+		panic("connect mysql error")
+	}
 	// 上面的连接使用后,  后面的内容在其后执行的代码任何地方都能调同
-	rows,err := gomysql.GetRows("x7", "select username,password from user")
+	rows,err := x7.GetRows("select username,password from user")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,7 +42,7 @@ func main() {
 		}
 		fmt.Printf("username: %s, password: %s \n", user, pwd)
 	}
-	gomysql.Close("x7")  // 关闭连接，  如果不关闭就是长连接， 注意， 就算关闭了也可以其他的地方调用sql 语句，  会根据保存的配置从新连接
+	x7.Close()  // 关闭连接，  如果不关闭就是长连接， 注意， 就算关闭了也可以其他的地方调用sql 语句，  会根据保存的配置从新连接
 }
 ```
 
