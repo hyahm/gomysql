@@ -7,10 +7,10 @@ import (
 
 var (
 	conf = &gomysql.Sqlconfig{
-		Host: "120.24.171.222",
+		Host: "127.0.0.1",
 		Port: 3306,
 		UserName: "zth",
-		Password: "f^9^NgW2WszEUB%P",
+		Password: "123456",
 		DbName: "zth",
 	}
 )
@@ -23,7 +23,6 @@ func main() {
 	}
 	var id int64
 	db.OpenDebug()
-	fmt.Printf("%+v \n", db)
 	err = db.GetOne("select id from cmf_developer limit 1").Scan(&id)
 	if err != nil {
 		panic(err)
