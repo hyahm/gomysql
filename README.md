@@ -51,3 +51,51 @@ func main() {
 go get github.com/hyahm/gomysql
 ```
 推荐直接复制sql.go 文件的内容到项目,  自己定制
+
+
+v0.0.2 版
+- 删除tx的支持， 需要使用的花，通过Db.Begin() 自行生成
+- 增加运行sql的调试信息， 可以打印运行的sql，方便找出sql错误
+- 减少复杂调用
+example.go
+```
+package main
+
+import (
+	"fmt"
+	"github.com/hyahm/gomysql"
+)
+
+var (
+	conf = &gomysql.Sqlconfig{
+		Host: "127.0.0.1",
+		Port: 3306,
+		UserName: "zth",
+		Password: "123456",
+		DbName: "zth",
+	}
+)
+
+
+func main() {
+	db, err := conf.NewDb()
+	if err != nil {
+		panic(err)
+	}
+	var id int64
+	db.OpenDebug()
+	err = db.GetOne("select id from cmf_developer limit 1").Scan(&id)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(db.PrintSql())
+	fmt.Println(id)
+}
+
+```
+
+
+
+
+
+
