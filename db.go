@@ -173,17 +173,17 @@ func (d *Db)Close() error {
 	return  nil
 }
 
-func (d *Db)GetOne(cmd string, args ...interface{}) *sql.Row {
+func (d *Db)GetOne(cmd string, args ...interface{}) (*sql.Row,error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
 	if err := d.ping(); err != nil  {
 		// 重连
 		if d, err = d.conndb();err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
-	return d.conn.QueryRowContext(d.Ctx, cmd, args...)
+	return d.conn.QueryRowContext(d.Ctx, cmd, args...), nil
 }
 
 // 还原sql
