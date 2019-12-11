@@ -10,57 +10,52 @@ import (
 	"strings"
 )
 
-//var conn map[string]*sql.DB
-var client map[string]*Db
-
 type Db struct {
 	conn *sql.DB
 	conf string
-	key string
 	Ctx context.Context
+	sql string
+	debug bool
 }
 
-func GetDb(tag string) (*Db, error) {
-	if client == nil {
-		return nil, NotInitERROR
-	}
-	if _, ok := client[tag]; !ok {
-		return nil, TAGERROR
-	}
-	return client[tag],nil
-}
-
-func (d *Db)connDB() error {
-	db, err := sql.Open("mysql", client[d.key].conf)
+func (d *Db) conndb() (*Db, error) {
+	conn,err := sql.Open("mysql", d.conf)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	if err = db.Ping(); err != nil {
-		return err
+	if err = conn.Ping(); err != nil {
+		return nil, err
 	}
-	client[d.key].conn = db
-	return nil
+	d.conn = conn
+	return d, nil
 }
-
 
 func (d *Db)GetConnections() int {
 	return d.conn.Stats().OpenConnections
 }
 
-func (d *Db)ping() bool {
-	if err := d.conn.Ping(); err != nil {
-		return false
-	}
-	return true
+func (d *Db) OpenDebug() *Db {
+	d.debug = true
+	return d
 }
 
+func (d *Db) CloseDebug() *Db {
+	d.debug = false
+	return d
+}
+
+func (d *Db)ping() error {
+	return d.conn.Ping()
+}
 
 func (d *Db)Update(cmd string, args ...interface{}) (int64, error) {
-	if !d.ping() {
+	if d.debug {
+		d.sql = cmdtostring(cmd, args...)
+	}
+	if err := d.ping(); err != nil  {
 		// 重连
-		if err := d.connDB(); err != nil {
-			panic(err)
+		if d, err = d.conndb();err != nil {
+			return 0,err
 		}
 	}
 	result, err :=  d.conn.ExecContext(d.Ctx, cmd, args...)
@@ -71,32 +66,43 @@ func (d *Db)Update(cmd string, args ...interface{}) (int64, error) {
 }
 
 func (d *Db)Delete(cmd string, args ...interface{}) (int64, error) {
+	if d.debug {
+		d.sql = cmdtostring(cmd, args...)
+	}
 	return d.Update(cmd, args...)
 }
 
 
 func (d *Db)Insert(cmd string, args ...interface{}) (int64, error) {
-	if !d.ping() {
+	if d.debug {
+		d.sql = cmdtostring(cmd, args...)
+	}
+	if err := d.ping(); err != nil  {
 		// 重连
-		if err := d.connDB(); err != nil {
-			panic(err)
+		if d, err = d.conndb();err != nil {
+			return 0,err
 		}
 	}
 	result, err :=  d.conn.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return 0, err
 	}
+
 	return result.LastInsertId()
 	//return 0, nil
+}
+
+func (d *Db) PrintSql() string {
+	return d.sql
 }
 
 
 func (d *Db)InsertMany(cmd string, args []interface{}) (int64, error) {
 
-	if !d.ping() {
+	if err := d.ping(); err != nil  {
 		// 重连
-		if err := d.connDB(); err != nil {
-			panic(err)
+		if d, err = d.conndb();err != nil {
+			return 0,err
 		}
 	}
 	if args == nil {
@@ -139,14 +145,20 @@ func (d *Db)InsertMany(cmd string, args []interface{}) (int64, error) {
 	for i := 1; i < count / column; i++ {
 		cmd = cmd + addcmd
 	}
-
+	if d.debug {
+		d.sql = cmdtostring(cmd, args...)
+	}
 	return d.Insert(cmd, args...)
 }
 
 func (d *Db)GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
-	if !d.ping() {
-		if err := d.connDB(); err != nil {
-			panic(err)
+	if d.debug {
+		d.sql = cmdtostring(cmd, args...)
+	}
+	if err := d.ping(); err != nil  {
+		// 重连
+		if d, err = d.conndb();err != nil {
+			return nil,err
 		}
 	}
 	return d.conn.QueryContext(d.Ctx, cmd, args...)
@@ -155,13 +167,19 @@ func (d *Db)GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 
 func (d *Db)Close() error {
 	//存在并且不为空才关闭
-	return d.conn.Close()
-
+	if d.conn != nil {
+		return d.conn.Close()
+	}
+	return  nil
 }
 
 func (d *Db)GetOne(cmd string, args ...interface{}) *sql.Row {
-	if !d.ping() {
-		if err := d.connDB(); err != nil {
+	if d.debug {
+		d.sql = cmdtostring(cmd, args...)
+	}
+	if err := d.ping(); err != nil  {
+		// 重连
+		if d, err = d.conndb();err != nil {
 			panic(err)
 		}
 	}
