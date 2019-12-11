@@ -95,7 +95,20 @@ func main() {
 ```
 
 
-
+v0.0.2 与v0.0.3 的区别
+因为源码sql的问题导致, 看起来 0.0.2更简单， 但是如果重联出错，会panic
+v0.0.2
+```
+err := db.GetOne("select id from cmf_developer limit 1").Scan(&id)
+```
+v0.0.3
+```
+row, err := db.GetOne("select id from cmf_developer limit 1")
+if err != nil {
+// todo
+}
+err = row.Scan(&id)
+```
 
 
 
