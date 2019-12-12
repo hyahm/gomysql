@@ -97,7 +97,7 @@ func (d *Db) PrintSql() string {
 }
 
 
-func (d *Db)InsertMany(cmd string, args []interface{}) (int64, error) {
+func (d *Db)InsertMany(cmd string, args ...interface{}) (int64, error) {
 
 	if err := d.ping(); err != nil  {
 		// 重连
@@ -109,7 +109,6 @@ func (d *Db)InsertMany(cmd string, args []interface{}) (int64, error) {
 		return d.Insert(cmd)
 	}
 
-		//找到括号的内容
 	// 先转为为小写
 	lowercmd := strings.ToLower(cmd)
 	// 找到关键字 values
