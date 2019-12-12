@@ -42,6 +42,10 @@ func main() {
 	db.OpenDebug()
 	err = db.GetOne("select id from cmf_developer limit 1").Scan(&id)
 	if err != nil {
+	// todo
+	}
+	err = row.Scan(&id)
+	if err != nil {
 		panic(err)
 	}
 	fmt.Println(db.PrintSql())
@@ -49,22 +53,10 @@ func main() {
 }
 
 ```
-
-
-v0.0.2 与v0.0.3 的区别
-因为源码sql的问题导致, 看起来 0.0.2更简单， 但是如果重联出错，会panic
-v0.0.2
+out
 ```
-err := db.GetOne("select id from cmf_developer limit 1").Scan(&id)
+select id from cmf_developer limit 1
+1
 ```
-v0.0.3
-```
-row, err := db.GetOne("select id from cmf_developer limit 1")
-if err != nil {
-// todo
-}
-err = row.Scan(&id)
-```
-
 
 
