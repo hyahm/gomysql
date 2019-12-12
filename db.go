@@ -145,9 +145,7 @@ func (d *Db)InsertMany(cmd string, args []interface{}) (int64, error) {
 	for i := 1; i < count / column; i++ {
 		cmd = cmd + addcmd
 	}
-	if d.debug {
-		d.sql = cmdtostring(cmd, args...)
-	}
+
 	return d.Insert(cmd, args...)
 }
 
