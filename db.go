@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"strconv"
 	"strings"
 )
 
@@ -185,22 +184,9 @@ func (d *Db)GetOne(cmd string, args ...interface{}) (*sql.Row,error) {
 
 // 还原sql
 func cmdtostring(cmd string, args ...interface{}) string {
-
-	var logstr string
-
+	cmd = strings.Replace(cmd, "?", "%s", -1)
 	for _, v := range args {
-		switch v.(type) {
-		case int64:
-			logstr = "'" + strconv.FormatInt(v.(int64), 10) + "'"
-		case int:
-			logstr = "'" + strconv.Itoa(v.(int)) + "'"
-		default:
-			logstr = "'" + v.(string) + "'"
-			//return
-		}
-		cmd = strings.Replace(cmd, "?", "%s", 1)
-		cmd = fmt.Sprintf(cmd, logstr)
-
+		v = fmt.Sprintf("'%s'", v)
 	}
-	return cmd
+	return fmt.Sprintf(cmd, args...)
 }
