@@ -186,7 +186,7 @@ func (d *Db)GetOne(cmd string, args ...interface{}) (*sql.Row,error) {
 func cmdtostring(cmd string, args ...interface{}) string {
 	cmd = strings.Replace(cmd, "?", "%s", -1)
 	for _, v := range args {
-		v = fmt.Sprintf("'%s'", v)
+		v = fmt.Sprintf("'%v'", v)
 	}
 	return fmt.Sprintf(cmd, args...)
 }
