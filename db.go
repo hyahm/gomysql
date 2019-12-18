@@ -91,7 +91,7 @@ func (d *Db)Insert(cmd string, args ...interface{}) (int64, error) {
 	//return 0, nil
 }
 
-func (d *Db) PrintSql() string {
+func (d *Db) GetSql() string {
 	return d.sql
 }
 
@@ -184,7 +184,7 @@ func (d *Db)GetOne(cmd string, args ...interface{}) (*sql.Row,error) {
 
 // 还原sql
 func cmdtostring(cmd string, args ...interface{}) string {
-	cmd = strings.Replace(cmd, "?", "%s", -1)
+	cmd = strings.Replace(cmd, "?", "%v", -1)
 	for _, v := range args {
 		v = fmt.Sprintf("'%v'", v)
 	}
