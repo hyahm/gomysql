@@ -15,6 +15,7 @@ type Db struct {
 	Ctx context.Context
 	sql string
 	debug bool
+
 }
 
 func (d *Db) conndb() (*Db, error) {
