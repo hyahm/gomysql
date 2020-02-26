@@ -5,21 +5,21 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"strings"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type Db struct {
-	conn *sql.DB
-	conf string
-	Ctx context.Context
-	sql string
+	conn  *sql.DB
+	conf  string
+	Ctx   context.Context
+	sql   string
 	debug bool
-
 }
 
 func (d *Db) conndb() (*Db, error) {
-	conn,err := sql.Open("mysql", d.conf)
+	conn, err := sql.Open("mysql", d.conf)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func (d *Db) conndb() (*Db, error) {
 	return d, nil
 }
 
-func (d *Db)GetConnections() int {
+func (d *Db) GetConnections() int {
 	return d.conn.Stats().OpenConnections
 }
 
@@ -44,46 +44,45 @@ func (d *Db) CloseDebug() *Db {
 	return d
 }
 
-func (d *Db)ping() error {
+func (d *Db) ping() error {
 	return d.conn.Ping()
 }
 
-func (d *Db)Update(cmd string, args ...interface{}) (int64, error) {
+func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	if err := d.ping(); err != nil  {
+	if err := d.ping(); err != nil {
 		// 重连
-		if d, err = d.conndb();err != nil {
-			return 0,err
+		if d, err = d.conndb(); err != nil {
+			return 0, err
 		}
 	}
-	result, err :=  d.conn.ExecContext(d.Ctx, cmd, args...)
+	result, err := d.conn.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected()
 }
 
-func (d *Db)Delete(cmd string, args ...interface{}) (int64, error) {
+func (d *Db) Delete(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
 	return d.Update(cmd, args...)
 }
 
-
-func (d *Db)Insert(cmd string, args ...interface{}) (int64, error) {
+func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	if err := d.ping(); err != nil  {
+	if err := d.ping(); err != nil {
 		// 重连
-		if d, err = d.conndb();err != nil {
-			return 0,err
+		if d, err = d.conndb(); err != nil {
+			return 0, err
 		}
 	}
-	result, err :=  d.conn.ExecContext(d.Ctx, cmd, args...)
+	result, err := d.conn.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -96,13 +95,12 @@ func (d *Db) GetSql() string {
 	return d.sql
 }
 
+func (d *Db) InsertMany(cmd string, args ...interface{}) (int64, error) {
 
-func (d *Db)InsertMany(cmd string, args ...interface{}) (int64, error) {
-
-	if err := d.ping(); err != nil  {
+	if err := d.ping(); err != nil {
 		// 重连
-		if d, err = d.conndb();err != nil {
-			return 0,err
+		if d, err = d.conndb(); err != nil {
+			return 0, err
 		}
 	}
 	if args == nil {
@@ -125,7 +123,7 @@ func (d *Db)InsertMany(cmd string, args ...interface{}) (int64, error) {
 	if start_index < 0 {
 		return 0, errors.New("sql error: eg: insert into table(name) values(?)")
 	}
-	value := cmd[tmp_index+start_index: end_index+1]
+	value := cmd[tmp_index+start_index : end_index+1]
 	//查看一行数据有多少列
 	column := 0
 	for _, v := range strings.Split(value[1:len(value)-1], ",") {
@@ -137,46 +135,46 @@ func (d *Db)InsertMany(cmd string, args ...interface{}) (int64, error) {
 
 	// 总共多少参数
 	count := len(args)
-	if count % column != 0 {
+	if count%column != 0 {
 		return 0, errors.New("args error")
 	}
 	addcmd := "," + value
-	for i := 1; i < count / column; i++ {
+	for i := 1; i < count/column; i++ {
 		cmd = cmd + addcmd
 	}
 
 	return d.Insert(cmd, args...)
 }
 
-func (d *Db)GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
+func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	if err := d.ping(); err != nil  {
+	if err := d.ping(); err != nil {
 		// 重连
-		if d, err = d.conndb();err != nil {
-			return nil,err
+		if d, err = d.conndb(); err != nil {
+			return nil, err
 		}
 	}
 	return d.conn.QueryContext(d.Ctx, cmd, args...)
 
 }
 
-func (d *Db)Close() error {
+func (d *Db) Close() error {
 	//存在并且不为空才关闭
 	if d.conn != nil {
 		return d.conn.Close()
 	}
-	return  nil
+	return nil
 }
 
-func (d *Db)GetOne(cmd string, args ...interface{}) (*sql.Row,error) {
+func (d *Db) GetOne(cmd string, args ...interface{}) (*sql.Row, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	if err := d.ping(); err != nil  {
+	if err := d.ping(); err != nil {
 		// 重连
-		if d, err = d.conndb();err != nil {
+		if d, err = d.conndb(); err != nil {
 			return nil, err
 		}
 	}
@@ -186,8 +184,13 @@ func (d *Db)GetOne(cmd string, args ...interface{}) (*sql.Row,error) {
 // 还原sql
 func cmdtostring(cmd string, args ...interface{}) string {
 	cmd = strings.Replace(cmd, "?", "%v", -1)
-	for _, v := range args {
-		v = fmt.Sprintf("'%v'", v)
+	if len(args) > 0 {
+		newargs := make([]interface{}, 0, len(args))
+		for _, v := range args {
+			v = fmt.Sprintf("'%v'", v)
+			newargs = append(newargs, v)
+		}
+		return fmt.Sprintf(cmd, newargs...)
 	}
-	return fmt.Sprintf(cmd, args...)
+	return cmd
 }
