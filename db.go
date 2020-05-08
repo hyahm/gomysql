@@ -168,17 +168,12 @@ func (d *Db) Close() error {
 	return nil
 }
 
-func (d *Db) GetOne(cmd string, args ...interface{}) (*sql.Row, error) {
+func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	if err := d.ping(); err != nil {
-		// 重连
-		if d, err = d.conndb(); err != nil {
-			return nil, err
-		}
-	}
-	return d.conn.QueryRowContext(d.Ctx, cmd, args...), nil
+
+	return d.conn.QueryRowContext(d.Ctx, cmd, args...)
 }
 
 // 还原sql
