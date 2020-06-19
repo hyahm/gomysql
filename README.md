@@ -44,10 +44,7 @@ func main() {
 	if err != nil {
 	// todo
 	}
-	err = row.Scan(&id)
-	if err != nil {
-		panic(err)
-	}
+	
 	fmt.Println(db.PrintSql())
 	fmt.Println(id)
 }
