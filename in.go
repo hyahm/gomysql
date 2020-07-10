@@ -20,7 +20,9 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 			if err != nil {
 				return cmd, vs, err
 			}
-			vs = append(vs, vv.Interface().([]interface{})...)
+			for i := 0; i < vv.Len(); i++ {
+				vs = append(vs, vv.Index(i).Interface())
+			}
 		} else {
 			vs = append(vs, value)
 		}
