@@ -5,6 +5,8 @@ import (
 	"errors"
 	"reflect"
 	"strings"
+
+	"github.com/hyahm/golog"
 )
 
 var RangeOutErr = errors.New("索引值超出范围")
@@ -14,23 +16,105 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 	var err error
 	for index, value := range args {
 		typ := reflect.TypeOf(value)
+		vv := reflect.ValueOf(value)
 		if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice {
-			vv := reflect.ValueOf(value)
-			cmd, err = replace(cmd, index, vv.Len())
-			if err != nil {
-				return cmd, vs, err
+			golog.Info(vv.Len())
+			l := vv.Len()
+			if l == 0 {
+				// 删除此条件
+				cmd, err = findStrIndex(cmd, index, true)
+				if err != nil {
+					return cmd, vs, err
+				}
+			} else if l == 1 {
+				cmd, err = findStrIndex(cmd, index, true)
+				if err != nil {
+					return cmd, vs, err
+				}
+			} else {
+				for i := 0; i < l; i++ {
+					vs = append(vs, vv.Index(i).Interface())
+				}
+				cmd, err = replace(cmd, index, l)
+				if err != nil {
+					return cmd, vs, err
+				}
 			}
-			for i := 0; i < vv.Len(); i++ {
-				vs = append(vs, vv.Index(i).Interface())
-			}
+
 		} else {
+			// 不是数组的话， 直接返回
 			vs = append(vs, value)
 		}
 	}
 	return cmd, vs, nil
 }
 
+func findStrIndex(cmd string, pos int, del bool) (string, error) {
+	count := strings.Count(cmd, "?")
+	tmp := cmd
+	lastcmd := ""
+	start := 0
+	for i := 0; i < count; i++ {
+		thisIndex := strings.Index(tmp, "?")
+		start = start + thisIndex + 1
+		tmp = tmp[thisIndex+1:]
+		if i == pos {
+			// 找到前面的(
+			ksindex := strings.LastIndex(cmd[:start], "(")
+			klindex := strings.LastIndex(cmd[start:], ")")
+			if ksindex <= 0 {
+				return "", errors.New("sql error")
+			}
+			if del {
+				inIndex := strings.LastIndex(cmd[:start], "in")
+				// 去掉空格
+				aa := strings.Trim(cmd[:inIndex], " ")
+				// 替换成=
+				// 找到前面一个空格位置
+				spaceIndex := strings.LastIndex(aa, " ")
+				// 去掉空格 继续找前面的
+				bb := strings.Trim(cmd[:spaceIndex], " ")
+				tIndex := strings.LastIndex(bb, " ")
+				lastStr := strings.Trim(cmd[tIndex:spaceIndex], " ")
+
+				// 再次查找前面的， 如果是or 或者 and ，wher, on
+				if lastStr == "or" || lastStr == "and" || lastStr == "where" || lastStr == "on" {
+					lastcmd = cmd[:tIndex] + tmp[1:]
+				} else {
+					lastcmd = cmd[:spaceIndex] + tmp[1:]
+				}
+				// lastcmd = cmd[:inIndex] + "="
+
+			} else {
+				inIndex := strings.LastIndex(cmd[:start], "in")
+				// 替换成=
+				// lastcmd = cmd[:inIndex] + "="
+
+				for j := 0; j < len(cmd); j++ {
+					if inIndex == j {
+						lastcmd += "="
+						continue
+					}
+					if ksindex == j || j == klindex+start || inIndex+1 == j {
+						continue
+					}
+					lastcmd += cmd[j : j+1]
+				}
+			}
+			// 1, 去掉括号， 修改in为 =
+
+			break
+
+		}
+	}
+	return lastcmd, nil
+}
+
 func replace(cmd string, index int, count int) (string, error) {
+	// 替换？,
+	golog.Info("index: ", index)
+	// index: 第几个问号开始替换
+	// count: 替换多少次
 	m := make([]string, count)
 	for j := 0; j < count; j++ {
 		m[j] = "?"
@@ -47,7 +131,6 @@ func replace(cmd string, index int, count int) (string, error) {
 		start = start + thisIndex + 1
 		tmp = tmp[thisIndex+1:]
 		if i == index {
-
 			return cmd[:start-1] + strings.Join(m, ",") + cmd[start:], nil
 		}
 	}
