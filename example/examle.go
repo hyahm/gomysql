@@ -29,7 +29,7 @@ func main() {
 	}
 	var id int64
 	db.OpenDebug()
-	_, err = db.GetOne("select id from shop_cover where id=? limit 1", 1)
+	err = db.GetOne("select id from shop_cover where id=? limit 1", 1).Scan(&id)
 	if err != nil {
 		panic(err)
 	}
