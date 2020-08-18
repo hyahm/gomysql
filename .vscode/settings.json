@@ -1,0 +1,12 @@
+{
+    "launch": {
+
+        "configurations": [],
+        "compounds": []
+    },
+    "window.zoomLevel": 1,
+    "workbench.tree.indent": 28,
+    "go.autocompleteUnimportedPackages": true,
+    "go.useLanguageServer": true
+
+}

@@ -9,7 +9,11 @@ import (
 	"github.com/hyahm/golog"
 )
 
+// RangeOutErr 错误信息
 var RangeOutErr = errors.New("索引值超出范围")
+
+// IgnoreWords 如果删除in的字段， 前面如果出现下面的关键字， 也删除
+var IgnoreWords = []string{"or", "and", "where", "on"}
 
 func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 	vs := make([]interface{}, 0)
@@ -27,7 +31,7 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 					return cmd, vs, err
 				}
 			} else if l == 1 {
-				cmd, err = findStrIndex(cmd, index, true)
+				cmd, err = findStrIndex(cmd, index, false)
 				if err != nil {
 					return cmd, vs, err
 				}
@@ -76,19 +80,19 @@ func findStrIndex(cmd string, pos int, del bool) (string, error) {
 				bb := strings.Trim(cmd[:spaceIndex], " ")
 				tIndex := strings.LastIndex(bb, " ")
 				lastStr := strings.Trim(cmd[tIndex:spaceIndex], " ")
-
+				golog.Infof("-%s--", lastStr)
 				// 再次查找前面的， 如果是or 或者 and ，wher, on
-				if lastStr == "or" || lastStr == "and" || lastStr == "where" || lastStr == "on" {
-					lastcmd = cmd[:tIndex] + tmp[1:]
-				} else {
-					lastcmd = cmd[:spaceIndex] + tmp[1:]
+				for _, word := range IgnoreWords {
+					if word == lastStr {
+						lastcmd = cmd[:tIndex] + tmp[1:]
+						goto endloop
+					}
 				}
-				// lastcmd = cmd[:inIndex] + "="
+
+				lastcmd = cmd[:spaceIndex] + tmp[1:]
 
 			} else {
 				inIndex := strings.LastIndex(cmd[:start], "in")
-				// 替换成=
-				// lastcmd = cmd[:inIndex] + "="
 
 				for j := 0; j < len(cmd); j++ {
 					if inIndex == j {
@@ -107,6 +111,7 @@ func findStrIndex(cmd string, pos int, del bool) (string, error) {
 
 		}
 	}
+endloop:
 	return lastcmd, nil
 }
 

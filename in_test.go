@@ -9,6 +9,7 @@ func TestInMany(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	t.Log(cmd)
 	t.Log(args)
 }
