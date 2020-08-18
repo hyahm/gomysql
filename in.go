@@ -5,8 +5,6 @@ import (
 	"errors"
 	"reflect"
 	"strings"
-
-	"github.com/hyahm/golog"
 )
 
 // RangeOutErr 错误信息
@@ -22,7 +20,6 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 		typ := reflect.TypeOf(value)
 		vv := reflect.ValueOf(value)
 		if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice {
-			golog.Info(vv.Len())
 			l := vv.Len()
 			if l == 0 {
 				// 删除此条件
@@ -80,7 +77,6 @@ func findStrIndex(cmd string, pos int, del bool) (string, error) {
 				bb := strings.Trim(cmd[:spaceIndex], " ")
 				tIndex := strings.LastIndex(bb, " ")
 				lastStr := strings.Trim(cmd[tIndex:spaceIndex], " ")
-				golog.Infof("-%s--", lastStr)
 				// 再次查找前面的， 如果是or 或者 and ，wher, on
 				for _, word := range IgnoreWords {
 					if word == lastStr {
@@ -117,7 +113,6 @@ endloop:
 
 func replace(cmd string, index int, count int) (string, error) {
 	// 替换？,
-	golog.Info("index: ", index)
 	// index: 第几个问号开始替换
 	// count: 替换多少次
 	m := make([]string, count)
