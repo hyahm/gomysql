@@ -3,6 +3,7 @@ package gomysql
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -19,19 +20,25 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 	for index, value := range args {
 		typ := reflect.TypeOf(value)
 		vv := reflect.ValueOf(value)
+
 		if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice {
 			l := vv.Len()
+			fmt.Printf("%T\n", vv.Interface().([]interface{}))
+			svv := vv.Interface().([]interface{})
+			fmt.Println(svv)
 			if l == 0 {
 				// 删除此条件
 				cmd, err = findStrIndex(cmd, index, true)
 				if err != nil {
 					return cmd, vs, err
 				}
+				continue
 			} else if l == 1 {
 				cmd, err = findStrIndex(cmd, index, false)
 				if err != nil {
 					return cmd, vs, err
 				}
+				vs = append(vs, svv[0])
 			} else {
 				for i := 0; i < l; i++ {
 					vs = append(vs, vv.Index(i).Interface())
@@ -40,12 +47,13 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 				if err != nil {
 					return cmd, vs, err
 				}
+				vs = append(vs, svv...)
 			}
 
-		} else {
-			// 不是数组的话， 直接返回
-			vs = append(vs, value)
 		}
+
+		// 不是数组的话， 直接返回
+
 	}
 	return cmd, vs, nil
 }
