@@ -6,16 +6,30 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/hyahm/golog"
 )
 
 // RangeOutErr 错误信息
 var RangeOutErr = errors.New("索引值超出范围")
 
 // IgnoreWords 如果删除in的字段， 前面如果出现下面的关键字， 也删除
-var IgnoreWords = []string{"or", "and", "where", "on"}
+var IgnoreWords = []string{"or", "and"}
+
+// 如果后面有or 或者 and，只用删除or 或者and 那么删除前面的where， on 关键字
+var IgnoreCondition = []string{"where", "on"}
+
+// 如果后面有or 或者 and，只用删除or 或者and
+// 如果没有， 那么删除前面的 where 或者 on
 
 func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
+	// 如果问号跟参数对不上， 报错
+	count := strings.Count(cmd, "?")
+
 	vs := make([]interface{}, 0)
+	if len(args) != count {
+		return "", vs, errors.New(fmt.Sprintf("params error, expect %d, got %d", count, len(args)))
+	}
 	var err error
 	for index, value := range args {
 		typ := reflect.TypeOf(value)
@@ -23,9 +37,7 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 
 		if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice {
 			l := vv.Len()
-			fmt.Printf("%T\n", vv.Interface().([]interface{}))
 			svv := vv.Interface().([]interface{})
-			fmt.Println(svv)
 			if l == 0 {
 				// 删除此条件
 				cmd, err = findStrIndex(cmd, index, true)
@@ -39,10 +51,7 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 					return cmd, vs, err
 				}
 				vs = append(vs, svv[0])
-			} else {
-				for i := 0; i < l; i++ {
-					vs = append(vs, vv.Index(i).Interface())
-				}
+			} else if l > 1 {
 				cmd, err = replace(cmd, index, l)
 				if err != nil {
 					return cmd, vs, err
@@ -50,10 +59,11 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 				vs = append(vs, svv...)
 			}
 
+		} else {
+			vs = append(vs, value)
 		}
 
 		// 不是数组的话， 直接返回
-
 	}
 	return cmd, vs, nil
 }
@@ -62,42 +72,89 @@ func findStrIndex(cmd string, pos int, del bool) (string, error) {
 	count := strings.Count(cmd, "?")
 	tmp := cmd
 	lastcmd := ""
+	preStr := ""
+	sufStr := ""
 	start := 0
 	for i := 0; i < count; i++ {
 		thisIndex := strings.Index(tmp, "?")
 		start = start + thisIndex + 1
 		tmp = tmp[thisIndex+1:]
+
 		if i == pos {
 			// 找到前面的(
-			ksindex := strings.LastIndex(cmd[:start], "(")
-			klindex := strings.LastIndex(cmd[start:], ")")
-			if ksindex <= 0 {
+			ksindex := strings.Index(cmd[:start], "(")
+			klindex := strings.Index(cmd[start:], ")")
+
+			if ksindex < 0 || klindex < 0 {
 				return "", errors.New("sql error")
 			}
+			preStr = cmd[:ksindex]
+			sufStr = cmd[klindex+start+1:]
+			inIndex := strings.LastIndex(preStr, "in")
+			if inIndex < 0 {
+				return "", errors.New("not found in , please do not use in Func")
+			}
+
+			// 删除in
+			preStr = strings.Trim(cmd[:inIndex], " ")
 			if del {
-				inIndex := strings.LastIndex(cmd[:start], "in")
-				// 去掉空格
-				aa := strings.Trim(cmd[:inIndex], " ")
-				// 替换成=
 				// 找到前面一个空格位置
-				spaceIndex := strings.LastIndex(aa, " ")
-				// 去掉空格 继续找前面的
-				bb := strings.Trim(cmd[:spaceIndex], " ")
-				tIndex := strings.LastIndex(bb, " ")
-				lastStr := strings.Trim(cmd[tIndex:spaceIndex], " ")
-				// 再次查找前面的， 如果是or 或者 and ，wher, on
-				for _, word := range IgnoreWords {
-					if word == lastStr {
-						lastcmd = cmd[:tIndex] + tmp[1:]
-						goto endloop
+				// 去掉前面的单词
+				beforeIn, _, word := getLastStr(preStr)
+				if word == "not" {
+					// 如果前面是not， 那么还要去掉一次
+					beforeIn, _, _ = getLastStr(beforeIn)
+				}
+				preStr = beforeIn
+				//  end 删除前面的
+				sufStr = strings.Trim(cmd[klindex+start+1:], " ")
+				deleteCondition := true
+				if sufStr != "" {
+					// 不为空先删除or 或者 and
+					conditionStr, _, word := getNextStr(sufStr)
+					if word == "or" || word == "and" {
+						// 删除后面的
+						sufStr = conditionStr
+						deleteCondition = false
+					}
+				}
+				if deleteCondition {
+					beforeIn, _, word := getLastStr(preStr)
+					if word == "where" || word == "on" {
+						preStr = beforeIn
+					}
+				}
+				// 删除前面的 tiaonian
+				if sufStr == "" {
+					// 如果后面没东西， 还要删除 and or
+					beforeIn, _, word := getLastStr(preStr)
+					if word == "and" || word == "or" {
+						preStr = beforeIn
 					}
 				}
 
-				lastcmd = cmd[:spaceIndex] + tmp[1:]
+				lastcmd = preStr + sufStr
+
+				golog.Info(lastcmd)
 
 			} else {
-				inIndex := strings.LastIndex(cmd[:start], "in")
-
+				golog.Info(preStr)
+				golog.Info(sufStr)
+				beforeIn, _, word := getLastStr(preStr)
+				if word == "not" {
+					// 如果前面是not， 那么还要去掉一次
+					beforeIn, _, _ = getLastStr(beforeIn)
+					for j := 0; j < len(cmd); j++ {
+						if inIndex == j {
+							lastcmd += "="
+							continue
+						}
+						if ksindex == j || j == klindex+start || inIndex+1 == j {
+							continue
+						}
+						lastcmd += cmd[j : j+1]
+					}
+				}
 				for j := 0; j < len(cmd); j++ {
 					if inIndex == j {
 						lastcmd += "="
@@ -109,13 +166,11 @@ func findStrIndex(cmd string, pos int, del bool) (string, error) {
 					lastcmd += cmd[j : j+1]
 				}
 			}
-			// 1, 去掉括号， 修改in为 =
 
 			break
 
 		}
 	}
-endloop:
 	return lastcmd, nil
 }
 
@@ -176,4 +231,20 @@ func (d *Db) GetOneIn(cmd string, args ...interface{}) *sql.Row {
 		panic(err)
 	}
 	return d.GetOne(newcmd, newargs...)
+}
+
+func getLastStr(s string) (string, int, string) {
+	// 通过一个字符串， 获取新的字符串 上一个空格字符的上一个word， 以及字符串中的位置
+	new := strings.Trim(s, " ")
+	index := strings.LastIndex(new, " ")
+	word := new[index+1:]
+	return new[:index], index, word
+}
+
+func getNextStr(s string) (string, int, string) {
+	// 通过一个字符串， 截取后的新的字符串 上一个空格字符的上一个word， 以及字符串中的位置
+	new := strings.Trim(s, " ")
+	index := strings.Index(new, " ")
+	word := new[:index]
+	return new[index:], index, word
 }
