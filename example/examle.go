@@ -9,11 +9,11 @@ import (
 
 var (
 	conf = &gomysql.Sqlconfig{
-		Host:     "172.247.132.58",
+		Host:     "192.168.50.211",
 		Port:     3306,
-		UserName: "root",
-		Password: "$h@F6ph6&UdY",
-		DbName:   "shop",
+		UserName: "cander",
+		Password: "123456",
+		DbName:   "novel",
 	}
 )
 
@@ -29,7 +29,11 @@ func main() {
 	}
 	var id int64
 	db.OpenDebug()
+<<<<<<< HEAD
 	err = db.GetOne("select id from shop_cover where id=? limit 1", 1).Scan(&id)
+=======
+	err = db.GetOne("select id from dp_book where id=? limit 1", 1).Scan(&id)
+>>>>>>> 254aad07cbbd6f364111a8754703991b58ec9b5f
 	if err != nil {
 		panic(err)
 	}
