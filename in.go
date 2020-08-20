@@ -49,12 +49,12 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 			l := vv.Len()
 			svv := vv.Interface().([]interface{})
 			if l == 0 {
-				// 删除此条件
-				cmd, err = findStrIndex(cmd, index, true)
-				if err != nil {
-					return cmd, vs, err
-				}
-				continue
+				// 直接修改为空
+				// cmd, err = findStrIndex(cmd, index, true)
+				// if err != nil {
+				// 	return cmd, vs, err
+				// }
+				vs = append(vs, "")
 			} else if l == 1 {
 				cmd, err = findStrIndex(cmd, index, false)
 				if err != nil {
