@@ -56,10 +56,10 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 				// }
 				vs = append(vs, "")
 			} else if l == 1 {
-				cmd, err = findStrIndex(cmd, index, false)
-				if err != nil {
-					return cmd, vs, err
-				}
+				// cmd, err = findStrIndex(cmd, index, false)
+				// if err != nil {
+				// 	return cmd, vs, err
+				// }
 				vs = append(vs, svv[0])
 			} else if l > 1 {
 				cmd, err = replace(cmd, index, l)
