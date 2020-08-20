@@ -10,6 +10,16 @@ import (
 	"github.com/hyahm/golog"
 )
 
+type InArgs []string
+
+func (ia InArgs) ToInArgs() []interface{} {
+	ii := make([]interface{}, len(ia))
+	for i, v := range ia {
+		ii[i] = v
+	}
+	return ii
+}
+
 // RangeOutErr 错误信息
 var RangeOutErr = errors.New("索引值超出范围")
 
