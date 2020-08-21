@@ -13,26 +13,29 @@ import (
 
 func main() {
 	wg := &sync.WaitGroup{}
-	wg.Add(2)
-	Insert8(wg)
-	go Insert5(wg)
+	wg.Add(1)
+	go Insert8(wg)
+	// go Insert5(wg)
+
 	wg.Wait()
+	golog.Info("33333")
 }
 
-const Num = 1000000
+// Num 插入的次数
+const Num = 100000
 
+// Insert8 mysql8 的插入
 func Insert8(wg *sync.WaitGroup) {
-	fmt.Println(111)
-	wg.Add(1)
 	start := time.Now()
 	conf := &gomysql.Sqlconfig{
-		Host:               "192.168.50.211",
-		UserName:           "cander",
-		Password:           "123456",
-		DbName:             "test",
-		Port:               3306,
-		MaxOpenConns:       1000,
-		MaxIdleConns:       1,
+		Host:         "127.0.0.1",
+		UserName:     "root",
+		Password:     "123456",
+		DbName:       "test",
+		Port:         3306,
+		MaxOpenConns: 1000,
+		MaxIdleConns: 1,
+
 		WriteLogWhenFailed: true,
 		LogFile:            ".failedlinux.sql",
 	}
@@ -42,14 +45,15 @@ func Insert8(wg *sync.WaitGroup) {
 		golog.Error(err)
 		os.Exit(1)
 	}
+
 	for i := 0; i < Num; i++ {
-		go func() {
+		go func(i int) {
 			_, err := db.Insert("insert into test(name, age) values(?,?)", fmt.Sprintf("test%d", i), i)
 			if err != nil {
 				golog.Error(err)
 			}
 			ch <- 1
-		}()
+		}(i)
 
 	}
 
@@ -60,36 +64,40 @@ func Insert8(wg *sync.WaitGroup) {
 	wg.Done()
 }
 
+// Insert5 mysql5 的插入
 func Insert5(wg *sync.WaitGroup) {
-	wg.Add(1)
 	start := time.Now()
 	conf := &gomysql.Sqlconfig{
-		Host:               "192.168.50.49",
-		UserName:           "test",
+		Host:               "127.0.0.1",
+		UserName:           "root",
 		Password:           "123456",
 		DbName:             "test",
 		Port:               3306,
-		MaxOpenConns:       1000,
-		MaxIdleConns:       1,
+		MaxOpenConns:       50000,
+		MaxIdleConns:       50000,
+		ConnMaxLifetime:    time.Minute * 10,
+		ReadTimeout:        time.Second * 10,
 		WriteLogWhenFailed: true,
 		LogFile:            ".failedwindows.sql",
 	}
-	ch := make(chan int, Num)
+	// ch := make(chan int, Num)
 	db, err := conf.NewDb()
 	if err != nil {
 		log.Fatal(err)
 	}
+	db.GetConnections()
 	for i := 0; i < Num; i++ {
-		go func() {
-			db.Insert("insert into test(name, age) values(?,?)", fmt.Sprintf("test%d", i), i)
-			ch <- 1
-		}()
-
+		// go func(i int) {
+		// 	db.Insert("insert into test(name, age) values(?,?)", fmt.Sprintf("test%d", i), i)
+		// 	ch <- 1
+		// }(i)
+		db.Insert("insert into test(name, age) values(?,?)", fmt.Sprintf("test%d", i), i)
+		// ch <- 1
 	}
 
-	for i := 0; i < Num; i++ {
-		<-ch
-	}
+	// for i := 0; i < Num; i++ {
+	// 	<-ch
+	// }
 	log.Println("mysql5:", time.Since(start).Seconds())
 	wg.Done()
 }

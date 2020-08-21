@@ -37,24 +37,27 @@ func (d *Db) conndb() (*Db, error) {
 		return nil, err
 	}
 	d.conn = conn
-	if d.sc.MaxOpenConns > 0 {
+	if d.sc.MaxIdleConns > 0 {
 		d.conn.SetMaxIdleConns(d.sc.MaxIdleConns)
 	}
 	if d.sc.MaxOpenConns > 0 {
 		d.conn.SetMaxOpenConns(d.sc.MaxOpenConns)
+		if d.sc.MaxIdleConns < d.sc.MaxOpenConns {
+			d.conn.SetMaxIdleConns(d.sc.MaxOpenConns)
+		}
 	}
 	if d.sc.ConnMaxLifetime > 0 {
 		d.conn.SetConnMaxLifetime(d.sc.ConnMaxLifetime)
 	}
 	if d.sc.WriteLogWhenFailed {
+		d.mu = &sync.RWMutex{}
 		if d.sc.LogFile == "" {
 			d.sc.LogFile = ".failed.sql"
-			var err error
-			d.mu = &sync.RWMutex{}
-			d.f, err = os.OpenFile(d.sc.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
-			if err != nil {
-				log.Fatal(err)
-			}
+		}
+		var err error
+		d.f, err = os.OpenFile(d.sc.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 	return d, nil
@@ -64,7 +67,7 @@ func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error
 	if d.sc.WriteLogWhenFailed {
 		d.sql = cmdtostring(cmd, args...)
 		d.mu.Lock()
-		d.f.WriteString(fmt.Sprintf("-- %s\n", time.Now().Format("2006-01-02 15:04:05")))
+		d.f.WriteString(fmt.Sprintf("-- %s, reason: %s\n", time.Now().Format("2006-01-02 15:04:05"), err.Error()))
 		d.f.WriteString(d.sql + "\n")
 		d.f.Sync()
 		d.mu.Unlock()
@@ -73,6 +76,7 @@ func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error
 }
 
 func (d *Db) GetConnections() int {
+
 	return d.conn.Stats().OpenConnections
 }
 
@@ -113,7 +117,7 @@ func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-
+	golog.Info("openconn: ", d.conn.Stats().OpenConnections)
 	result, err := d.conn.ExecContext(context.Background(), cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)

@@ -18,15 +18,16 @@ type Sqlconfig struct {
 	ColumnsWithAlias        bool
 	MultiStatements         bool
 	ParseTime               bool
-	Tls                     bool
-	ReadTimeout             string
-	Timeout                 string
+	TLS                     bool
+	ReadTimeout             time.Duration
+	Timeout                 time.Duration
+	WriteTimeout            time.Duration
 	AllowOldPasswords       bool
 	Charset                 string
 	Loc                     string
 	MaxAllowedPacket        uint64
 	Collation               string
-	MaxOpenConns            int
+	MaxOpenConns            int // 请设置小于mysql 的max_connections值
 	MaxIdleConns            int
 	ConnMaxLifetime         time.Duration
 	WriteLogWhenFailed      bool
@@ -37,8 +38,8 @@ type Sqlconfig struct {
 func (s *Sqlconfig) NewDb() (*Db, error) {
 	s.setDefaultConfig()
 	//判断是否是空map
-	connstring := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&clientFoundRows=%t&allowCleartextPasswords=%t&interpolateParams=%t&columnsWithAlias=%t&multiStatements=%t&parseTime=%t&tls=%t&readTimeout=%s&timeout=%s&allowOldPasswords=%t&loc=%s&maxAllowedPacket=%d&collation=%s",
-		s.UserName, s.Password, s.Host, s.Port, s.DbName, s.Charset, s.ClientFoundRows, s.AllowCleartextPasswords, s.InterpolateParams, s.ColumnsWithAlias, s.MultiStatements, s.ParseTime, s.Tls, s.ReadTimeout, s.Timeout, s.AllowCleartextPasswords, s.Loc, s.MaxAllowedPacket, s.Collation,
+	connstring := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&clientFoundRows=%t&allowCleartextPasswords=%t&interpolateParams=%t&columnsWithAlias=%t&multiStatements=%t&parseTime=%t&tls=%t&readTimeout=%s&timeout=%s&allowOldPasswords=%t&loc=%s&maxAllowedPacket=%d&collation=%s&writeTimeout=%s",
+		s.UserName, s.Password, s.Host, s.Port, s.DbName, s.Charset, s.ClientFoundRows, s.AllowCleartextPasswords, s.InterpolateParams, s.ColumnsWithAlias, s.MultiStatements, s.ParseTime, s.TLS, s.ReadTimeout, s.Timeout, s.AllowCleartextPasswords, s.Loc, s.MaxAllowedPacket, s.Collation, s.WriteTimeout,
 	)
 	db := &Db{
 		conf: connstring,
@@ -59,11 +60,11 @@ func (s *Sqlconfig) setDefaultConfig() {
 	if s.Loc == "" {
 		s.Loc = "UTC"
 	}
-	if s.Timeout == "" {
-		s.Timeout = "1s"
+	if s.Timeout == 0 {
+		s.Timeout = time.Second * 2
 	}
-	if s.ReadTimeout == "" {
-		s.ReadTimeout = "5s"
+	if s.ReadTimeout == 0 {
+		s.ReadTimeout = time.Second * 20
 	}
 
 }
