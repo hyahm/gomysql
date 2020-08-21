@@ -5,9 +5,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"strings"
+	"sync"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/hyahm/golog"
 )
 
 type Db struct {
@@ -16,18 +21,55 @@ type Db struct {
 	Ctx   context.Context
 	sql   string
 	debug bool
+	sc    *Sqlconfig
+	f     *os.File
+	mu    *sync.RWMutex
 }
 
 func (d *Db) conndb() (*Db, error) {
 	conn, err := sql.Open("mysql", d.conf)
 	if err != nil {
+		golog.Info(err)
 		return nil, err
 	}
 	if err = conn.Ping(); err != nil {
+		golog.Info(err)
 		return nil, err
 	}
 	d.conn = conn
+	if d.sc.MaxOpenConns > 0 {
+		d.conn.SetMaxIdleConns(d.sc.MaxIdleConns)
+	}
+	if d.sc.MaxOpenConns > 0 {
+		d.conn.SetMaxOpenConns(d.sc.MaxOpenConns)
+	}
+	if d.sc.ConnMaxLifetime > 0 {
+		d.conn.SetConnMaxLifetime(d.sc.ConnMaxLifetime)
+	}
+	if d.sc.WriteLogWhenFailed {
+		if d.sc.LogFile == "" {
+			d.sc.LogFile = ".failed.sql"
+			var err error
+			d.mu = &sync.RWMutex{}
+			d.f, err = os.OpenFile(d.sc.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
 	return d, nil
+}
+
+func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error) {
+	if d.sc.WriteLogWhenFailed {
+		d.sql = cmdtostring(cmd, args...)
+		d.mu.Lock()
+		d.f.WriteString(fmt.Sprintf("-- %s\n", time.Now().Format("2006-01-02 15:04:05")))
+		d.f.WriteString(d.sql + "\n")
+		d.f.Sync()
+		d.mu.Unlock()
+	}
+	return 0, err
 }
 
 func (d *Db) GetConnections() int {
@@ -52,15 +94,9 @@ func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	if err := d.ping(); err != nil {
-		// 重连
-		if d, err = d.conndb(); err != nil {
-			return 0, err
-		}
-	}
 	result, err := d.conn.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
-		return 0, err
+		return d.execError(err, cmd, args...)
 	}
 	return result.RowsAffected()
 }
@@ -69,6 +105,7 @@ func (d *Db) Delete(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
+
 	return d.Update(cmd, args...)
 }
 
@@ -76,19 +113,13 @@ func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	if err := d.ping(); err != nil {
-		// 重连
-		if d, err = d.conndb(); err != nil {
-			return 0, err
-		}
-	}
-	result, err := d.conn.ExecContext(d.Ctx, cmd, args...)
+
+	result, err := d.conn.ExecContext(context.Background(), cmd, args...)
 	if err != nil {
-		return 0, err
+		return d.execError(err, cmd, args...)
 	}
 
-	return result.LastInsertId()
-	//return 0, nil
+	return result.RowsAffected()
 }
 
 func (d *Db) GetSql() string {
@@ -96,7 +127,7 @@ func (d *Db) GetSql() string {
 }
 
 func (d *Db) InsertMany(cmd string, args ...interface{}) (int64, error) {
-
+	// sql: insert into test(id, name) values(?,?)  args: interface{}...  1,'t1', 2, 't2', 3, 't3'
 	if err := d.ping(); err != nil {
 		// 重连
 		if d, err = d.conndb(); err != nil {
@@ -157,7 +188,6 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 		}
 	}
 	return d.conn.QueryContext(d.Ctx, cmd, args...)
-
 }
 
 func (d *Db) Close() error {
