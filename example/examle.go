@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/hyahm/gomysql"
 )
@@ -18,18 +17,14 @@ var (
 )
 
 func main() {
-	var t time.Duration
 
-	if t == time.Duration(0) {
-		fmt.Println("1111")
-	}
 	db, err := conf.NewDb()
 	if err != nil {
 		panic(err)
 	}
 	var id int64
-	err = db.GetOne("select id from shop_cover where id=? limit 1", 1).Scan(&id)
-	err = db.GetOne("select id from dp_book where id=? limit 1", 1).Scan(&id)
+	err = db.GetOne("select id from shop_cover where id=? limit 1", 1).Scanf(&id)
+	err = db.GetOne("select id from dp_book where id=? limit 1", 1).Scanf(&id)
 	if err != nil {
 		panic(err)
 	}

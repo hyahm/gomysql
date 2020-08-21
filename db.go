@@ -15,15 +15,18 @@ import (
 	"github.com/hyahm/golog"
 )
 
+var ch chan struct{}
+
 type Db struct {
-	conn  *sql.DB
-	conf  string
-	Ctx   context.Context
-	sql   string
-	debug bool
-	sc    *Sqlconfig
-	f     *os.File
-	mu    *sync.RWMutex
+	conn    *sql.DB
+	conf    string
+	Ctx     context.Context
+	sql     string
+	debug   bool
+	sc      *Sqlconfig
+	f       *os.File
+	mu      *sync.RWMutex
+	maxConn int
 }
 
 func (d *Db) conndb() (*Db, error) {
@@ -45,7 +48,13 @@ func (d *Db) conndb() (*Db, error) {
 		if d.sc.MaxIdleConns < d.sc.MaxOpenConns {
 			d.conn.SetMaxIdleConns(d.sc.MaxOpenConns)
 		}
+		d.maxConn = d.sc.MaxOpenConns
+	} else {
+		d.maxConn = 1024
 	}
+	ch = make(chan struct{}, d.maxConn)
+	// 防止开始就有很多连接，导致
+
 	if d.sc.ConnMaxLifetime > 0 {
 		d.conn.SetConnMaxLifetime(d.sc.ConnMaxLifetime)
 	}
@@ -98,10 +107,19 @@ func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
+	for d.conn.Stats().OpenConnections >= d.maxConn {
+		golog.Info(len(ch))
+		time.Sleep(time.Microsecond * 10)
+	}
+	ch <- struct{}{}
+	defer func() {
+		<-ch
+	}()
 	result, err := d.conn.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)
 	}
+
 	return result.RowsAffected()
 }
 
@@ -117,7 +135,14 @@ func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	golog.Info("openconn: ", d.conn.Stats().OpenConnections)
+	for d.conn.Stats().OpenConnections >= d.maxConn {
+		golog.Info(len(ch))
+		time.Sleep(time.Microsecond * 10)
+	}
+	ch <- struct{}{}
+	defer func() {
+		<-ch
+	}()
 	result, err := d.conn.ExecContext(context.Background(), cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)
@@ -181,17 +206,17 @@ func (d *Db) InsertMany(cmd string, args ...interface{}) (int64, error) {
 	return d.Insert(cmd, args...)
 }
 
-func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
+func (d *Db) GetRows(cmd string, args ...interface{}) (*Rows, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	if err := d.ping(); err != nil {
-		// 重连
-		if d, err = d.conndb(); err != nil {
-			return nil, err
-		}
+	for d.conn.Stats().OpenConnections >= d.maxConn {
+		golog.Info(len(ch))
+		time.Sleep(time.Microsecond * 10)
 	}
-	return d.conn.QueryContext(d.Ctx, cmd, args...)
+	ch <- struct{}{}
+	rows, err := d.conn.QueryContext(d.Ctx, cmd, args...)
+	return &Rows{rows}, err
 }
 
 func (d *Db) Close() error {
@@ -202,12 +227,16 @@ func (d *Db) Close() error {
 	return nil
 }
 
-func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
+func (d *Db) GetOne(cmd string, args ...interface{}) *Row {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-
-	return d.conn.QueryRowContext(d.Ctx, cmd, args...)
+	for d.conn.Stats().OpenConnections >= d.maxConn {
+		golog.Info(len(ch))
+		time.Sleep(time.Microsecond * 10)
+	}
+	ch <- struct{}{}
+	return &Row{d.conn.QueryRowContext(d.Ctx, cmd, args...)}
 }
 
 // 还原sql

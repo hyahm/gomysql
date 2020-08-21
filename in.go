@@ -1,7 +1,6 @@
 package gomysql
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
@@ -221,7 +220,7 @@ func (d *Db) DeleteIn(cmd string, args ...interface{}) (int64, error) {
 	return d.Delete(newcmd, newargs...)
 }
 
-func (d *Db) GetRowsIn(cmd string, args ...interface{}) (*sql.Rows, error) {
+func (d *Db) GetRowsIn(cmd string, args ...interface{}) (*Rows, error) {
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
 		return nil, err
@@ -229,7 +228,7 @@ func (d *Db) GetRowsIn(cmd string, args ...interface{}) (*sql.Rows, error) {
 	return d.GetRows(newcmd, newargs...)
 }
 
-func (d *Db) GetOneIn(cmd string, args ...interface{}) *sql.Row {
+func (d *Db) GetOneIn(cmd string, args ...interface{}) *Row {
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
 		panic(err)

@@ -28,7 +28,7 @@ type Sqlconfig struct {
 	MaxAllowedPacket        uint64
 	Collation               string
 	MaxOpenConns            int // 请设置小于mysql 的max_connections值
-	MaxIdleConns            int
+	MaxIdleConns            int // 如果设置了 MaxOpenConns， 那么此直将等于 MaxOpenConns
 	ConnMaxLifetime         time.Duration
 	WriteLogWhenFailed      bool
 	LogFile                 string
