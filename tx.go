@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -43,18 +42,6 @@ func (d *Db) NewTx(opt *sql.TxOptions) (*Tx, error) {
 	}, nil
 }
 
-func (t *Tx) execError(err error, cmd string, args ...interface{}) (int64, error) {
-	if t.sc.WriteLogWhenFailed {
-		t.sql = cmdtostring(cmd, args...)
-		t.mu.Lock()
-		t.f.WriteString(fmt.Sprintf("-- %s, reason: %s\n", time.Now().Format("2006-01-02 15:04:05"), err.Error()))
-		t.f.WriteString(t.sql + "\n")
-		t.f.Sync()
-		t.mu.Unlock()
-	}
-	return 0, err
-}
-
 func (t *Tx) OpenDebug() {
 	t.debug = true
 }
@@ -74,7 +61,7 @@ func (t *Tx) Update(cmd string, args ...interface{}) (int64, error) {
 
 	result, err := t.ExecContext(t.Ctx, cmd, args...)
 	if err != nil {
-		return t.execError(err, cmd, args...)
+		return 0, err
 	}
 
 	return result.RowsAffected()
@@ -99,7 +86,7 @@ func (t *Tx) Insert(cmd string, args ...interface{}) (int64, error) {
 
 	result, err := t.ExecContext(t.Ctx, cmd, args...)
 	if err != nil {
-		return t.execError(err, cmd, args...)
+		return 0, err
 	}
 
 	return result.LastInsertId()
