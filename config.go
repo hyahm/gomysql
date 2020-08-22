@@ -2,8 +2,14 @@ package gomysql
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"log"
+	"os"
+	"sync"
 	"time"
+
+	"github.com/hyahm/golog"
 )
 
 type Sqlconfig struct {
@@ -41,21 +47,63 @@ func (s *Sqlconfig) NewDb() (*Db, error) {
 	connstring := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&clientFoundRows=%t&allowCleartextPasswords=%t&interpolateParams=%t&columnsWithAlias=%t&multiStatements=%t&parseTime=%t&tls=%t&readTimeout=%s&timeout=%s&allowOldPasswords=%t&loc=%s&maxAllowedPacket=%d&collation=%s&writeTimeout=%s",
 		s.UserName, s.Password, s.Host, s.Port, s.DbName, s.Charset, s.ClientFoundRows, s.AllowCleartextPasswords, s.InterpolateParams, s.ColumnsWithAlias, s.MultiStatements, s.ParseTime, s.TLS, s.ReadTimeout, s.Timeout, s.AllowCleartextPasswords, s.Loc, s.MaxAllowedPacket, s.Collation, s.WriteTimeout,
 	)
-	db := &Db{
-		conf: connstring,
-		Ctx:  context.Background(),
-		sc:   s,
-	}
-	err := db.conndb()
+
+	return s.conndb(connstring)
+}
+
+func (s *Sqlconfig) conndb(conf string) (*Db, error) {
+
+	conn, err := sql.Open("mysql", conf)
 	if err != nil {
+		golog.Info(err)
 		return nil, err
+	}
+	if err = conn.Ping(); err != nil {
+		golog.Info(err)
+		return nil, err
+	}
+
+	db := &Db{
+		conn,
+		conf,
+		context.Background(),
+		"",
+		false,
+		s,
+		nil,
+		nil,
+		0,
+	}
+
+	if s.ReadTimeout == 0 {
+		s.ReadTimeout = time.Second * 30
+	}
+	db.SetMaxIdleConns(s.MaxIdleConns)
+	if s.MaxOpenConns > 0 {
+		db.maxConn = s.MaxOpenConns
+	} else {
+		db.maxConn = 1024
+	}
+	// 防止开始就有很多连接，导致
+	db.SetMaxOpenConns(s.MaxOpenConns)
+	db.SetConnMaxLifetime(s.ConnMaxLifetime)
+	if db.sc.WriteLogWhenFailed {
+		db.mu = &sync.RWMutex{}
+		if db.sc.LogFile == "" {
+			db.sc.LogFile = ".failed.sql"
+		}
+		var err error
+		db.f, err = os.OpenFile(db.sc.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	return db, nil
 }
 
 func (s *Sqlconfig) setDefaultConfig() {
 	if s.Charset == "" {
-		s.Charset = "utf8"
+		s.Charset = "utf8mb4"
 	}
 	if s.Collation == "" {
 		s.Collation = "utf8mb4_general_ci"

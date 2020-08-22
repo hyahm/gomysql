@@ -20,20 +20,20 @@ func main() {
 }
 
 // Num 插入的次数
-const Num = 1000000
+const Num = 1000
 
 // Insert8 mysql8 的插入
 func Insert8(wg *sync.WaitGroup) {
 
 	start := time.Now()
 	conf := &gomysql.Sqlconfig{
-		Host:               "192.168.50.211",
+		Host:               "127.0.0.1",
 		UserName:           "cander",
 		Password:           "123456",
 		DbName:             "test",
 		Port:               3306,
-		MaxOpenConns:       1024,
-		MaxIdleConns:       1,
+		MaxOpenConns:       100,
+		MaxIdleConns:       10,
 		ReadTimeout:        100 * time.Second,
 		WriteTimeout:       100 * time.Second,
 		WriteLogWhenFailed: true,

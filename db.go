@@ -5,18 +5,16 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/hyahm/golog"
 )
 
 type Db struct {
-	conn    *sql.DB
+	*sql.DB
 	conf    string
 	Ctx     context.Context
 	sql     string
@@ -25,46 +23,6 @@ type Db struct {
 	f       *os.File
 	mu      *sync.RWMutex
 	maxConn int
-}
-
-func (d *Db) conndb() error {
-	conn, err := sql.Open("mysql", d.conf)
-	if err != nil {
-		golog.Info(err)
-		return err
-	}
-	if err = conn.Ping(); err != nil {
-		golog.Info(err)
-		return err
-	}
-	d.conn = conn
-	if d.sc.ReadTimeout == 0 {
-		d.sc.ReadTimeout = time.Second * 30
-	}
-	if d.sc.MaxIdleConns > 0 {
-		d.conn.SetMaxIdleConns(d.sc.MaxIdleConns)
-	}
-	if d.sc.MaxOpenConns > 0 {
-		d.conn.SetMaxOpenConns(d.sc.MaxOpenConns)
-		d.maxConn = d.sc.MaxOpenConns
-	} else {
-		d.maxConn = 1024
-	}
-	// 防止开始就有很多连接，导致
-
-	d.conn.SetConnMaxLifetime(d.sc.ConnMaxLifetime)
-	if d.sc.WriteLogWhenFailed {
-		d.mu = &sync.RWMutex{}
-		if d.sc.LogFile == "" {
-			d.sc.LogFile = ".failed.sql"
-		}
-		var err error
-		d.f, err = os.OpenFile(d.sc.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0755)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	return nil
 }
 
 func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error) {
@@ -81,21 +39,19 @@ func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error
 
 func (d *Db) GetConnections() int {
 
-	return d.conn.Stats().OpenConnections
+	return d.Stats().OpenConnections
 }
 
-func (d *Db) OpenDebug() *Db {
+func (d *Db) OpenDebug() {
 	d.debug = true
-	return d
 }
 
-func (d *Db) CloseDebug() *Db {
+func (d *Db) CloseDebug() {
 	d.debug = false
-	return d
 }
 
 func (d *Db) ping() error {
-	return d.conn.Ping()
+	return d.Ping()
 }
 
 func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
@@ -107,7 +63,7 @@ func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
 		return 0, err
 	}
 
-	result, err := d.conn.ExecContext(d.Ctx, cmd, args...)
+	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)
 	}
@@ -132,12 +88,12 @@ func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 		return 0, err
 	}
 
-	result, err := d.conn.ExecContext(d.Ctx, cmd, args...)
+	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)
 	}
 
-	return result.RowsAffected()
+	return result.LastInsertId()
 }
 
 func (d *Db) GetSql() string {
@@ -199,13 +155,13 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 		return nil, err
 	}
 
-	return d.conn.QueryContext(d.Ctx, cmd, args...)
+	return d.QueryContext(d.Ctx, cmd, args...)
 }
 
 func (d *Db) Close() error {
 	//存在并且不为空才关闭
-	if d.conn != nil {
-		return d.conn.Close()
+	if d != nil {
+		return d.Close()
 	}
 	return nil
 }
@@ -220,7 +176,7 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *Row {
 	}
 
 	return &Row{
-		d.conn.QueryRowContext(d.Ctx, cmd, args...), nil}
+		d.QueryRowContext(d.Ctx, cmd, args...), nil}
 }
 
 // 还原sql
@@ -239,7 +195,7 @@ func cmdtostring(cmd string, args ...interface{}) string {
 
 func (d *Db) privateTooManyConn() error {
 	timeout := time.Microsecond * 10
-	for d.conn.Stats().OpenConnections >= d.maxConn {
+	for d.Stats().OpenConnections >= d.maxConn {
 		if timeout.Microseconds() < d.sc.ReadTimeout.Microseconds()/2 {
 			time.Sleep(timeout)
 			timeout = timeout * 2
