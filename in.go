@@ -1,12 +1,11 @@
 package gomysql
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"reflect"
 	"strings"
-
-	"github.com/hyahm/golog"
 )
 
 type InArgs []string
@@ -145,7 +144,6 @@ func findStrIndex(cmd string, pos int, del bool) (string, error) {
 				lastcmd = preStr + sufStr
 
 			} else {
-				golog.Info(preStr)
 				beforeIn, word := getLastStr(preStr)
 				if word == "not" {
 					// 如果前面是not， 那么还要去掉一次
@@ -154,19 +152,6 @@ func findStrIndex(cmd string, pos int, del bool) (string, error) {
 				} else {
 					lastcmd = preStr + "=?" + sufStr
 				}
-				golog.Info(lastcmd)
-				// beforeIn, _ = getLastStr(preStr)
-				// preStr = beforeIn
-				// for j := 0; j < len(cmd); j++ {
-				// 	if inIndex == j {
-				// 		lastcmd += "="
-				// 		continue
-				// 	}
-				// 	if ksindex == j || j == klindex+start || inIndex+1 == j {
-				// 		continue
-				// 	}
-				// 	lastcmd += cmd[j : j+1]
-				// }
 			}
 
 			break
@@ -220,7 +205,7 @@ func (d *Db) DeleteIn(cmd string, args ...interface{}) (int64, error) {
 	return d.Delete(newcmd, newargs...)
 }
 
-func (d *Db) GetRowsIn(cmd string, args ...interface{}) (*Rows, error) {
+func (d *Db) GetRowsIn(cmd string, args ...interface{}) (*sql.Rows, error) {
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
 		return nil, err

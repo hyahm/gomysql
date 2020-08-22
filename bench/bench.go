@@ -16,29 +16,28 @@ func main() {
 	wg.Add(1)
 	go Insert8(wg)
 	// go Insert5(wg)
-
 	wg.Wait()
-	golog.Info("33333")
 }
 
 // Num 插入的次数
-const Num = 1000
+const Num = 1000000
 
 // Insert8 mysql8 的插入
 func Insert8(wg *sync.WaitGroup) {
 
 	start := time.Now()
 	conf := &gomysql.Sqlconfig{
-		Host:               "127.0.0.1",
-		UserName:           "root",
+		Host:               "192.168.50.211",
+		UserName:           "cander",
 		Password:           "123456",
 		DbName:             "test",
 		Port:               3306,
-		MaxOpenConns:       1000,
+		MaxOpenConns:       1024,
 		MaxIdleConns:       1,
 		ReadTimeout:        100 * time.Second,
 		WriteTimeout:       100 * time.Second,
 		WriteLogWhenFailed: true,
+		ConnMaxLifetime:    30 * time.Second,
 		LogFile:            ".failedlinux.sql",
 	}
 	ch := make(chan int, Num)
@@ -51,7 +50,6 @@ func Insert8(wg *sync.WaitGroup) {
 	for i := 0; i < Num; i++ {
 		go func(i int) {
 			db.Insert("insert into test(name, age) values(?,?)", fmt.Sprintf("test%d", i), i)
-
 			ch <- 1
 		}(i)
 

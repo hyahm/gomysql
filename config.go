@@ -25,11 +25,11 @@ type Sqlconfig struct {
 	AllowOldPasswords       bool
 	Charset                 string
 	Loc                     string
-	MaxAllowedPacket        uint64
+	MaxAllowedPacket        uint64 // insert 插入大量数据的时候会用到 或者用insertmany
 	Collation               string
-	MaxOpenConns            int // 请设置小于mysql 的max_connections值
-	MaxIdleConns            int // 如果设置了 MaxOpenConns， 那么此直将等于 MaxOpenConns
-	ConnMaxLifetime         time.Duration
+	MaxOpenConns            int           // 请设置小于等于mysql 的max_connections值， 建议等于max_connections
+	MaxIdleConns            int           // 如果设置了 MaxOpenConns， 那么此直将等于 MaxOpenConns
+	ConnMaxLifetime         time.Duration // 连接池设置
 	WriteLogWhenFailed      bool
 	LogFile                 string
 }
@@ -46,8 +46,11 @@ func (s *Sqlconfig) NewDb() (*Db, error) {
 		Ctx:  context.Background(),
 		sc:   s,
 	}
-
-	return db.conndb()
+	err := db.conndb()
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
 }
 
 func (s *Sqlconfig) setDefaultConfig() {

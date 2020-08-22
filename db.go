@@ -27,15 +27,15 @@ type Db struct {
 	maxConn int
 }
 
-func (d *Db) conndb() (*Db, error) {
+func (d *Db) conndb() error {
 	conn, err := sql.Open("mysql", d.conf)
 	if err != nil {
 		golog.Info(err)
-		return nil, err
+		return err
 	}
 	if err = conn.Ping(); err != nil {
 		golog.Info(err)
-		return nil, err
+		return err
 	}
 	d.conn = conn
 	if d.sc.ReadTimeout == 0 {
@@ -46,18 +46,13 @@ func (d *Db) conndb() (*Db, error) {
 	}
 	if d.sc.MaxOpenConns > 0 {
 		d.conn.SetMaxOpenConns(d.sc.MaxOpenConns)
-		if d.sc.MaxIdleConns < d.sc.MaxOpenConns {
-			d.conn.SetMaxIdleConns(d.sc.MaxOpenConns)
-		}
 		d.maxConn = d.sc.MaxOpenConns
 	} else {
 		d.maxConn = 1024
 	}
 	// 防止开始就有很多连接，导致
 
-	if d.sc.ConnMaxLifetime > 0 {
-		d.conn.SetConnMaxLifetime(d.sc.ConnMaxLifetime)
-	}
+	d.conn.SetConnMaxLifetime(d.sc.ConnMaxLifetime)
 	if d.sc.WriteLogWhenFailed {
 		d.mu = &sync.RWMutex{}
 		if d.sc.LogFile == "" {
@@ -69,7 +64,7 @@ func (d *Db) conndb() (*Db, error) {
 			log.Fatal(err)
 		}
 	}
-	return d, nil
+	return nil
 }
 
 func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error) {
@@ -137,7 +132,7 @@ func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 		return 0, err
 	}
 
-	result, err := d.conn.ExecContext(context.Background(), cmd, args...)
+	result, err := d.conn.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)
 	}
@@ -151,12 +146,7 @@ func (d *Db) GetSql() string {
 
 func (d *Db) InsertMany(cmd string, args ...interface{}) (int64, error) {
 	// sql: insert into test(id, name) values(?,?)  args: interface{}...  1,'t1', 2, 't2', 3, 't3'
-	if err := d.ping(); err != nil {
-		// 重连
-		if d, err = d.conndb(); err != nil {
-			return 0, err
-		}
-	}
+
 	if args == nil {
 		return d.Insert(cmd)
 	}
@@ -200,7 +190,7 @@ func (d *Db) InsertMany(cmd string, args ...interface{}) (int64, error) {
 	return d.Insert(cmd, args...)
 }
 
-func (d *Db) GetRows(cmd string, args ...interface{}) (*Rows, error) {
+func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
@@ -208,8 +198,8 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*Rows, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows, err := d.conn.QueryContext(d.Ctx, cmd, args...)
-	return &Rows{rows}, err
+
+	return d.conn.QueryContext(d.Ctx, cmd, args...)
 }
 
 func (d *Db) Close() error {
@@ -228,6 +218,7 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *Row {
 	if err != nil {
 		return &Row{err: err}
 	}
+
 	return &Row{
 		d.conn.QueryRowContext(d.Ctx, cmd, args...), nil}
 }

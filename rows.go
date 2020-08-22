@@ -2,26 +2,13 @@ package gomysql
 
 import "database/sql"
 
-type Rows struct {
-	*sql.Rows
-}
-
 type Row struct {
 	*sql.Row
 	err error
 }
 
-func (r *Rows) Close() {
-	r.Close()
-}
-
-func (r *Row) Close() {
-	r.Scan()
-	r.Close()
-}
-
 func (r *Row) Scanf(dest ...interface{}) error {
-	// 请使用 Scanf 代替 Scan
+	// 请使用 Scanf 代替 Scan, 多封装了一层error
 	if r.err != nil {
 		return r.err
 	}
