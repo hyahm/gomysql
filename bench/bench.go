@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyahm/golog"
 	"github.com/hyahm/gomysql"
 )
 
@@ -43,7 +42,6 @@ func Insert8(wg *sync.WaitGroup) {
 	ch := make(chan int, Num)
 	db, err := conf.NewDb()
 	if err != nil {
-		golog.Error(err)
 		os.Exit(1)
 	}
 

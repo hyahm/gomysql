@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/hyahm/golog"
 	"github.com/hyahm/gomysql"
 )
 
@@ -26,29 +25,23 @@ func main() {
 	}
 	db, err := conf.NewDb()
 	if err != nil {
-		golog.Error(err)
 		os.Exit(1)
 	}
 	tx, err := db.NewTx(nil)
-	id, err := tx.Insert("insert into test(name, age) value(?, ?)", "1", 2)
+	_, err := tx.Insert("insert into test(name, age) value(?, ?)", "1", 2)
 	if err != nil {
 		log.Fatal(err)
 	}
-	golog.Info(id)
 	twoid, err := tx.Insert("insert into test(name, age) value(?, ?)", "2", 4)
 	if err != nil {
 		log.Fatal(err)
 	}
-	golog.Info(twoid)
 	_, err = tx.Update("update test set age=10 where id=?", twoid)
 	if err != nil {
 		log.Fatal(err)
 	}
 	err = tx.Commit()
 	if err != nil {
-		err = tx.Rollback()
-		if err != nil {
-			golog.Error(err)
-		}
+		tx.Rollback()
 	}
 }

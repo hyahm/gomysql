@@ -8,8 +8,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"github.com/hyahm/golog"
 )
 
 type Sqlconfig struct {
@@ -55,11 +53,9 @@ func (s *Sqlconfig) conndb(conf string) (*Db, error) {
 
 	conn, err := sql.Open("mysql", conf)
 	if err != nil {
-		golog.Info(err)
 		return nil, err
 	}
 	if err = conn.Ping(); err != nil {
-		golog.Info(err)
 		return nil, err
 	}
 
