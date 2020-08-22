@@ -23,8 +23,8 @@ func main() {
 		panic(err)
 	}
 	var id int64
-	err = db.GetOne("select id from shop_cover where id=? limit 1", 1).Scanf(&id)
-	err = db.GetOne("select id from dp_book where id=? limit 1", 1).Scanf(&id)
+	err = db.GetOne("select id from shop_cover where id=? limit 1", 1).Scan(&id)
+	err = db.GetOne("select id from dp_book where id=? limit 1", 1).Scan(&id)
 	if err != nil {
 		panic(err)
 	}
