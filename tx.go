@@ -4,21 +4,19 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"os"
 	"strings"
-	"sync"
 	"time"
 )
 
 type Tx struct {
 	*sql.Tx
-	conf    string
-	Ctx     context.Context
-	sql     string
-	debug   bool
-	sc      *Sqlconfig
-	f       *os.File
-	mu      *sync.RWMutex
+	conf  string
+	Ctx   context.Context
+	sql   string
+	debug bool
+	sc    *Sqlconfig
+	// f       *os.File
+	// mu      *sync.RWMutex
 	maxConn int
 	db      *Db
 }
@@ -35,8 +33,6 @@ func (d *Db) NewTx(opt *sql.TxOptions) (*Tx, error) {
 		d.sql,
 		d.debug,
 		d.sc,
-		d.f,
-		d.mu,
 		d.maxConn,
 		d,
 	}, nil

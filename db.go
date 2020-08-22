@@ -50,8 +50,11 @@ func (d *Db) CloseDebug() {
 	d.debug = false
 }
 
-func (d *Db) ping() error {
-	return d.Ping()
+func (d *Db) Flush() {
+	if d.f != nil {
+		d.f.Sync()
+		d.f.Close()
+	}
 }
 
 func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {

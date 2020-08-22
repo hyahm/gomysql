@@ -28,7 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 	tx, err := db.NewTx(nil)
-	_, err := tx.Insert("insert into test(name, age) value(?, ?)", "1", 2)
+	_, err = tx.Insert("insert into test(name, age) value(?, ?)", "1", 2)
 	if err != nil {
 		log.Fatal(err)
 	}
