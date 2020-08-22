@@ -6,8 +6,8 @@ mysql 只是简单封装
  - [x] 避免连接过多导致的失败
  - [x] 支持in的操作
 
-example.go
-```
+bench
+```go
 package main
 
 import (
@@ -55,19 +55,27 @@ func Insert8(wg *sync.WaitGroup) {
 		}(i)
 
 	}
-
+	
+	
+	
 	for i := 0; i < Num; i++ {
 		<-ch
+	}
+	
+	rows,err := db.GetRowsIn("select id from test where age in (?)", gomysql.InArgs([]string{"1","2","3","4","5"}).ToInArgs())
+	if err != nil {
+		os.Exit(1)
+	}
+	for rows.Next() {
+		var id int64
+	  	rows.Scan(&id)
 	}
 	log.Println("mysql8:", time.Since(start).Seconds())
 	wg.Done()
 }
 
 ```
-out
-```
-select id from cmf_developer limit 1
-1
-```
+
+
 
 
