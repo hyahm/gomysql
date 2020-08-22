@@ -8,11 +8,11 @@ type Rows struct {
 
 type Row struct {
 	*sql.Row
+	err error
 }
 
 func (r *Rows) Close() {
 	r.Close()
-	<-ch
 }
 
 func (r *Row) Close() {
@@ -22,8 +22,8 @@ func (r *Row) Close() {
 
 func (r *Row) Scanf(dest ...interface{}) error {
 	// 请使用 Scanf 代替 Scan
-	defer func() {
-		<-ch
-	}()
+	if r.err != nil {
+		return r.err
+	}
 	return r.Scan(dest...)
 }

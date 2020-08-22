@@ -26,6 +26,7 @@ const Num = 1000
 
 // Insert8 mysql8 的插入
 func Insert8(wg *sync.WaitGroup) {
+
 	start := time.Now()
 	conf := &gomysql.Sqlconfig{
 		Host:               "127.0.0.1",

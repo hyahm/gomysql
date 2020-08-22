@@ -15,8 +15,6 @@ import (
 	"github.com/hyahm/golog"
 )
 
-var ch chan struct{}
-
 type Db struct {
 	conn    *sql.DB
 	conf    string
@@ -40,6 +38,9 @@ func (d *Db) conndb() (*Db, error) {
 		return nil, err
 	}
 	d.conn = conn
+	if d.sc.ReadTimeout == 0 {
+		d.sc.ReadTimeout = time.Second * 30
+	}
 	if d.sc.MaxIdleConns > 0 {
 		d.conn.SetMaxIdleConns(d.sc.MaxIdleConns)
 	}
@@ -52,7 +53,6 @@ func (d *Db) conndb() (*Db, error) {
 	} else {
 		d.maxConn = 1024
 	}
-	ch = make(chan struct{}, d.maxConn)
 	// 防止开始就有很多连接，导致
 
 	if d.sc.ConnMaxLifetime > 0 {
@@ -107,14 +107,11 @@ func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	for d.conn.Stats().OpenConnections >= d.maxConn {
-		golog.Info(len(ch))
-		time.Sleep(time.Microsecond * 10)
+	err := d.privateTooManyConn()
+	if err != nil {
+		return 0, err
 	}
-	ch <- struct{}{}
-	defer func() {
-		<-ch
-	}()
+
 	result, err := d.conn.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)
@@ -135,14 +132,11 @@ func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	for d.conn.Stats().OpenConnections >= d.maxConn {
-		golog.Info(len(ch))
-		time.Sleep(time.Microsecond * 10)
+	err := d.privateTooManyConn()
+	if err != nil {
+		return 0, err
 	}
-	ch <- struct{}{}
-	defer func() {
-		<-ch
-	}()
+
 	result, err := d.conn.ExecContext(context.Background(), cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)
@@ -210,11 +204,10 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*Rows, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	for d.conn.Stats().OpenConnections >= d.maxConn {
-		golog.Info(len(ch))
-		time.Sleep(time.Microsecond * 10)
+	err := d.privateTooManyConn()
+	if err != nil {
+		return nil, err
 	}
-	ch <- struct{}{}
 	rows, err := d.conn.QueryContext(d.Ctx, cmd, args...)
 	return &Rows{rows}, err
 }
@@ -231,12 +224,12 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *Row {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	for d.conn.Stats().OpenConnections >= d.maxConn {
-		golog.Info(len(ch))
-		time.Sleep(time.Microsecond * 10)
+	err := d.privateTooManyConn()
+	if err != nil {
+		return &Row{err: err}
 	}
-	ch <- struct{}{}
-	return &Row{d.conn.QueryRowContext(d.Ctx, cmd, args...)}
+	return &Row{
+		d.conn.QueryRowContext(d.Ctx, cmd, args...), nil}
 }
 
 // 还原sql
@@ -251,4 +244,18 @@ func cmdtostring(cmd string, args ...interface{}) string {
 		return fmt.Sprintf(cmd, newargs...)
 	}
 	return cmd
+}
+
+func (d *Db) privateTooManyConn() error {
+	timeout := time.Microsecond * 10
+	for d.conn.Stats().OpenConnections >= d.maxConn {
+		if timeout.Microseconds() < d.sc.ReadTimeout.Microseconds()/2 {
+			time.Sleep(timeout)
+			timeout = timeout * 2
+		} else {
+			return errors.New("read io timeout, more than " + d.sc.ReadTimeout.String())
+		}
+
+	}
+	return nil
 }
