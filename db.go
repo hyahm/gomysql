@@ -65,15 +65,16 @@ func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
 		d.sql = cmdtostring(cmd, args...)
 	}
 	ch <- struct{}{}
+	defer func() {
+		<-ch
+	}()
 	err := d.privateTooManyConn()
 	if err != nil {
-		<-ch
 		return 0, err
 	}
 
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
-		<-ch
 		return d.execError(err, cmd, args...)
 	}
 
@@ -93,15 +94,16 @@ func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 		d.sql = cmdtostring(cmd, args...)
 	}
 	ch <- struct{}{}
+	defer func() {
+		<-ch
+	}()
 	err := d.privateTooManyConn()
 	if err != nil {
-		<-ch
 		return 0, err
 	}
 
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
-		<-ch
 		return d.execError(err, cmd, args...)
 	}
 
@@ -175,6 +177,11 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*Rows, error) {
 
 func (d *Db) Close() error {
 	//存在并且不为空才关闭
+	defer func() {
+		for {
+			<-ch
+		}
+	}()
 	if d != nil {
 		return d.Close()
 	}
@@ -188,7 +195,6 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *Row {
 	ch <- struct{}{}
 	err := d.privateTooManyConn()
 	if err != nil {
-		<-ch
 		return &Row{err: err}
 	}
 
