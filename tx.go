@@ -9,7 +9,7 @@ import (
 )
 
 type Tx struct {
-	*sql.Tx
+	tx    *sql.Tx
 	conf  string
 	Ctx   context.Context
 	sql   string
@@ -47,15 +47,19 @@ func (t *Tx) CloseDebug() {
 }
 
 func (t *Tx) Update(cmd string, args ...interface{}) (int64, error) {
+	if t.tx == nil {
+		return 0, errors.New("some thing wrong , may be you need close or rallback")
+	}
 	if t.debug {
 		t.sql = cmdtostring(cmd, args...)
 	}
 	err := t.privateTooManyConn()
 	if err != nil {
+		t.tx = nil
 		return 0, err
 	}
 
-	result, err := t.ExecContext(t.Ctx, cmd, args...)
+	result, err := t.tx.ExecContext(t.Ctx, cmd, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -80,7 +84,7 @@ func (t *Tx) Insert(cmd string, args ...interface{}) (int64, error) {
 		return 0, err
 	}
 
-	result, err := t.ExecContext(t.Ctx, cmd, args...)
+	result, err := t.tx.ExecContext(t.Ctx, cmd, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -147,7 +151,15 @@ func (t *Tx) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 		return nil, err
 	}
 
-	return t.QueryContext(t.Ctx, cmd, args...)
+	return t.tx.QueryContext(t.Ctx, cmd, args...)
+}
+
+func (t *Tx) Commit() error {
+	return t.tx.Commit()
+}
+
+func (t *Tx) Rollback() error {
+	return t.tx.Rollback()
 }
 
 func (t *Tx) Close() error {
@@ -168,7 +180,7 @@ func (t *Tx) GetOne(cmd string, args ...interface{}) *Row {
 	}
 
 	return &Row{
-		t.QueryRowContext(t.Ctx, cmd, args...), nil}
+		t.tx.QueryRowContext(t.Ctx, cmd, args...), nil}
 }
 
 func (t *Tx) privateTooManyConn() error {

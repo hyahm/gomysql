@@ -67,11 +67,13 @@ func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
 	ch <- struct{}{}
 	err := d.privateTooManyConn()
 	if err != nil {
+		<-ch
 		return 0, err
 	}
 
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
+		<-ch
 		return d.execError(err, cmd, args...)
 	}
 
@@ -93,11 +95,13 @@ func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 	ch <- struct{}{}
 	err := d.privateTooManyConn()
 	if err != nil {
+		<-ch
 		return 0, err
 	}
 
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
+		<-ch
 		return d.execError(err, cmd, args...)
 	}
 
@@ -161,6 +165,7 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*Rows, error) {
 	ch <- struct{}{}
 	err := d.privateTooManyConn()
 	if err != nil {
+		<-ch
 		return nil, err
 	}
 	rows := &Rows{}
@@ -183,6 +188,7 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *Row {
 	ch <- struct{}{}
 	err := d.privateTooManyConn()
 	if err != nil {
+		<-ch
 		return &Row{err: err}
 	}
 
