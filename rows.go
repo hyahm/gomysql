@@ -16,9 +16,6 @@ func (r *Row) Scan(dest ...interface{}) error {
 	if r.err != nil {
 		return r.err
 	}
-	defer func() {
-		<-ch
-	}()
 	return r.Row.Scan(dest...)
 }
 
@@ -31,9 +28,7 @@ func (rs *Rows) Next() bool {
 }
 
 func (rs *Rows) Close(dest ...interface{}) error {
-	defer func() {
-		<-ch
-	}()
+
 	return rs.Rows.Close()
 }
 

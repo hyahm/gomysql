@@ -165,9 +165,11 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*Rows, error) {
 		d.sql = cmdtostring(cmd, args...)
 	}
 	ch <- struct{}{}
+	defer func() {
+		<-ch
+	}()
 	err := d.privateTooManyConn()
 	if err != nil {
-		<-ch
 		return nil, err
 	}
 	rows := &Rows{}
@@ -193,6 +195,9 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *Row {
 		d.sql = cmdtostring(cmd, args...)
 	}
 	ch <- struct{}{}
+	defer func() {
+		<-ch
+	}()
 	err := d.privateTooManyConn()
 	if err != nil {
 		return &Row{err: err}
