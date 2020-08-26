@@ -26,7 +26,7 @@ func Insert8(wg *sync.WaitGroup) {
 
 	start := time.Now()
 	conf := &gomysql.Sqlconfig{
-		Host:               "127.0.0.1",
+		Host:               "192.168.50.211",
 		UserName:           "cander",
 		Password:           "123456",
 		DbName:             "test",

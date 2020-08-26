@@ -78,9 +78,12 @@ func (s *Sqlconfig) conndb(conf string) (*Db, error) {
 	if s.MaxOpenConns > 0 {
 		db.maxConn = s.MaxOpenConns
 	} else {
-		db.maxConn = 1024
+		db.maxConn = 100
 	}
+
 	// 防止开始就有很多连接，导致
+	ch = make(chan struct{}, db.maxConn)
+
 	db.SetMaxOpenConns(s.MaxOpenConns)
 	db.SetConnMaxLifetime(s.ConnMaxLifetime)
 	if db.sc.WriteLogWhenFailed {
