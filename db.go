@@ -160,7 +160,7 @@ func (d *Db) InsertMany(cmd string, args ...interface{}) (int64, error) {
 	return d.Insert(cmd, args...)
 }
 
-func (d *Db) GetRows(cmd string, args ...interface{}) (*Rows, error) {
+func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
@@ -172,9 +172,7 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*Rows, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows := &Rows{}
-	rows.Rows, rows.err = d.QueryContext(d.Ctx, cmd, args...)
-	return rows, rows.err
+	return d.QueryContext(d.Ctx, cmd, args...)
 }
 
 func (d *Db) Close() error {
