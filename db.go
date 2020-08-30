@@ -61,6 +61,7 @@ func (d *Db) Flush() {
 }
 
 func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
+
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}

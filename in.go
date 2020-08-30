@@ -65,7 +65,6 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 				if err != nil {
 					return cmd, vs, err
 				}
-				fmt.Println("cmd:", cmd)
 				vs = append(vs, svv...)
 				inIndex++
 			}
@@ -174,7 +173,6 @@ func replace(cmd string, index int, count int) (string, error) {
 
 	// 先寻找in的位置, 然后寻找后面的?
 	tmp := strings.ToLower(cmd)
-	// fmt.Println(index)
 	m := make([]string, count)
 	for j := 0; j < count; j++ {
 		m[j] = "?"
@@ -184,14 +182,11 @@ func replace(cmd string, index int, count int) (string, error) {
 	if index > c-1 {
 		return "", RangeOutErr
 	}
-	fmt.Println("index", index)
-	fmt.Println("tmp:", tmp)
 	start := 0
 	for i := 0; i < c; i++ {
 		thisInIndex := strings.Index(tmp[start:], " in ")
 		// 找到后面第一个?
 		start += thisInIndex + 4
-		fmt.Println(tmp[start:])
 		if index == i {
 			thisIndex := strings.Index(tmp[start:], "?")
 			start += thisIndex + 1
