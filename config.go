@@ -80,7 +80,10 @@ func (s *Sqlconfig) conndb(conf string) (*Db, error) {
 	} else {
 		db.maxConn = 100
 	}
-
+	db.maxpacket = s.MaxAllowedPacket
+	if s.MaxAllowedPacket == 0 {
+		db.maxpacket = 4 * 1024 * 1024 // 默认4m
+	}
 	// 防止开始就有很多连接，导致
 	ch = make(chan struct{}, db.maxConn)
 

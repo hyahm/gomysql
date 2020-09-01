@@ -15,14 +15,15 @@ import (
 
 type Db struct {
 	*sql.DB
-	conf    string
-	Ctx     context.Context
-	sql     string
-	debug   bool
-	sc      *Sqlconfig
-	f       *os.File
-	mu      *sync.RWMutex
-	maxConn int
+	conf      string
+	Ctx       context.Context
+	sql       string
+	debug     bool
+	sc        *Sqlconfig
+	f         *os.File
+	mu        *sync.RWMutex
+	maxpacket uint64
+	maxConn   int
 }
 
 func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error) {
@@ -101,12 +102,10 @@ func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)
 	}
-
 	return result.LastInsertId()
 }
 
@@ -116,7 +115,7 @@ func (d *Db) GetSql() string {
 
 func (d *Db) InsertMany(cmd string, args ...interface{}) (int64, error) {
 	// sql: insert into test(id, name) values(?,?)  args: interface{}...  1,'t1', 2, 't2', 3, 't3'
-
+	// 每次返回的是第一次插入的id
 	if args == nil {
 		return d.Insert(cmd)
 	}

@@ -13,7 +13,7 @@ var (
 		Port:         3306,
 		UserName:     "cander",
 		Password:     "123456",
-		DbName:       "novel",
+		DbName:       "test",
 		MaxOpenConns: 1,
 	}
 )
@@ -24,16 +24,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	var id int64
-	err = db.GetOne("select id from dp_book").Scan(&id)
+	s, err := db.InsertMany("insert into test(name, age) values(?,?)", "test3", 11, "test4", 2, "test3", 5)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(id)
-	_, err = db.GetRows("select id from dp_book")
-	if err != nil {
-		panic(err)
-	}
+	fmt.Println(s)
 	// rows.Close()
 
 	// rows.Close()
