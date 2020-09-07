@@ -18,14 +18,15 @@ func TestIn(t *testing.T) {
 	td := []testData{
 		{
 			title: "参数都有的 测试前后都有条件的",
-			cmd:   "select * from xxx where id=? and a in (?) and name=?",
+			cmd:   "select * from xxx where id=? and a in (?) and b in (?) and name=?",
 			args: []interface{}{
 				6666,
 				(InArgs)([]string{"1", "2", "4", "5", "6", "7", "8", "89", "3", "4"}).ToInArgs(),
+				(InArgs)([]string{"aaa", "bbb"}).ToInArgs(),
 				"cander",
 			},
 			expectCmd:  "select * from xxx where id=? and a in (?,?,?,?,?,?,?,?,?,?) and name=?",
-			expectArgs: []interface{}{6666, 1, 2, 4, 5, 6, 7, 8, 89, 3, 4, "cander"},
+			expectArgs: []interface{}{6666, "1", "2", "4", "5", "6", "7", "8", "89", "3", "4", "cander"},
 		},
 	}
 	for _, v := range td {

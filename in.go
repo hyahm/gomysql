@@ -36,10 +36,11 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 
 	vs := make([]interface{}, 0)
 	if len(args) != count {
-		return "", vs, errors.New(fmt.Sprintf("params error, expect %d, got %d", count, len(args)))
+		return "", vs, fmt.Errorf("params error, expect %d, got %d", count, len(args))
 	}
 	var err error
-	for index, value := range args {
+	inIndex := 0
+	for _, value := range args {
 		typ := reflect.TypeOf(value)
 		vv := reflect.ValueOf(value)
 
@@ -60,11 +61,12 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 				// }
 				vs = append(vs, svv[0])
 			} else if l > 1 {
-				cmd, err = replace(cmd, index, l)
+				cmd, err = replace(cmd, inIndex, l)
 				if err != nil {
 					return cmd, vs, err
 				}
 				vs = append(vs, svv...)
+				inIndex++
 			}
 
 		} else {
@@ -73,6 +75,7 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 
 		// 不是数组的话， 直接返回
 	}
+
 	return cmd, vs, nil
 }
 
@@ -139,6 +142,7 @@ func findStrIndex(cmd string, pos int, del bool) (string, error) {
 					if word == "and" || word == "or" {
 						preStr = beforeIn
 					}
+
 				}
 
 				lastcmd = preStr + sufStr
@@ -164,28 +168,31 @@ func findStrIndex(cmd string, pos int, del bool) (string, error) {
 
 func replace(cmd string, index int, count int) (string, error) {
 	// 替换？,
-	// index: 第几个问号开始替换
+	// index: 替换第几个in的？
 	// count: 替换多少次
+
+	// 先寻找in的位置, 然后寻找后面的?
+	tmp := strings.ToLower(cmd)
 	m := make([]string, count)
 	for j := 0; j < count; j++ {
 		m[j] = "?"
 	}
 
-	c := strings.Count(cmd, "?")
+	c := strings.Count(tmp, " in ")
 	if index > c-1 {
 		return "", RangeOutErr
 	}
 	start := 0
-	tmp := cmd
 	for i := 0; i < c; i++ {
-		thisIndex := strings.Index(tmp, "?")
-		start = start + thisIndex + 1
-		tmp = tmp[thisIndex+1:]
-		if i == index {
-			return cmd[:start-1] + strings.Join(m, ",") + cmd[start:], nil
+		thisInIndex := strings.Index(tmp[start:], " in ")
+		// 找到后面第一个?
+		start += thisInIndex + 4
+		if index == i {
+			thisIndex := strings.Index(tmp[start:], "?")
+			start += thisIndex + 1
+			return tmp[:start-1] + strings.Join(m, ",") + tmp[start:], nil
 		}
 	}
-
 	return cmd, nil
 }
 

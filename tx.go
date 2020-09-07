@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
-	"time"
 )
 
 type Tx struct {
@@ -53,11 +52,11 @@ func (t *Tx) Update(cmd string, args ...interface{}) (int64, error) {
 	if t.debug {
 		t.sql = cmdtostring(cmd, args...)
 	}
-	err := t.privateTooManyConn()
-	if err != nil {
-		t.tx = nil
-		return 0, err
-	}
+	// err := t.privateTooManyConn()
+	// if err != nil {
+	// 	t.tx = nil
+	// 	return 0, err
+	// }
 
 	result, err := t.tx.ExecContext(t.Ctx, cmd, args...)
 	if err != nil {
@@ -79,10 +78,10 @@ func (t *Tx) Insert(cmd string, args ...interface{}) (int64, error) {
 	if t.debug {
 		t.sql = cmdtostring(cmd, args...)
 	}
-	err := t.privateTooManyConn()
-	if err != nil {
-		return 0, err
-	}
+	// err := t.privateTooManyConn()
+	// if err != nil {
+	// 	return 0, err
+	// }
 
 	result, err := t.tx.ExecContext(t.Ctx, cmd, args...)
 	if err != nil {
@@ -146,10 +145,10 @@ func (t *Tx) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 	if t.debug {
 		t.sql = cmdtostring(cmd, args...)
 	}
-	err := t.privateTooManyConn()
-	if err != nil {
-		return nil, err
-	}
+	// err := t.privateTooManyConn()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return t.tx.QueryContext(t.Ctx, cmd, args...)
 }
@@ -174,25 +173,25 @@ func (t *Tx) GetOne(cmd string, args ...interface{}) *Row {
 	if t.debug {
 		t.sql = cmdtostring(cmd, args...)
 	}
-	err := t.privateTooManyConn()
-	if err != nil {
-		return &Row{err: err}
-	}
+	// err := t.privateTooManyConn()
+	// if err != nil {
+	// 	return &Row{err: err}
+	// }
 
 	return &Row{
 		t.tx.QueryRowContext(t.Ctx, cmd, args...), nil}
 }
 
-func (t *Tx) privateTooManyConn() error {
-	timeout := time.Microsecond * 10
-	for t.db.Stats().OpenConnections >= t.maxConn {
-		if timeout.Microseconds() < t.sc.ReadTimeout.Microseconds()/2 {
-			time.Sleep(timeout)
-			timeout = timeout * 2
-		} else {
-			return errors.New("read io timeout, more than " + t.sc.ReadTimeout.String())
-		}
+// func (t *Tx) privateTooManyConn() error {
+// 	timeout := time.Microsecond * 10
+// 	for t.db.Stats().OpenConnections >= t.maxConn {
+// 		if timeout.Microseconds() < t.sc.ReadTimeout.Microseconds()/2 {
+// 			time.Sleep(timeout)
+// 			timeout = timeout * 2
+// 		} else {
+// 			return errors.New("read io timeout, more than " + t.sc.ReadTimeout.String())
+// 		}
 
-	}
-	return nil
-}
+// 	}
+// 	return nil
+// }

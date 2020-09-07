@@ -69,6 +69,7 @@ func (s *Sqlconfig) conndb(conf string) (*Db, error) {
 		nil,
 		nil,
 		0,
+		0,
 	}
 
 	if s.ReadTimeout == 0 {

@@ -62,6 +62,7 @@ func (d *Db) Flush() {
 }
 
 func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
+
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
@@ -69,10 +70,10 @@ func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
 	defer func() {
 		<-ch
 	}()
-	err := d.privateTooManyConn()
-	if err != nil {
-		return 0, err
-	}
+	// err := d.privateTooManyConn()
+	// if err != nil {
+	// 	return 0, err
+	// }
 
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
@@ -98,10 +99,10 @@ func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 	defer func() {
 		<-ch
 	}()
-	err := d.privateTooManyConn()
-	if err != nil {
-		return 0, err
-	}
+	// err := d.privateTooManyConn()
+	// if err != nil {
+	// 	return 0, err
+	// }
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)
@@ -167,10 +168,10 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 	defer func() {
 		<-ch
 	}()
-	err := d.privateTooManyConn()
-	if err != nil {
-		return nil, err
-	}
+	// err := d.privateTooManyConn()
+	// if err != nil {
+	// 	return nil, err
+	// }
 	return d.QueryContext(d.Ctx, cmd, args...)
 }
 
@@ -195,10 +196,10 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *Row {
 	defer func() {
 		<-ch
 	}()
-	err := d.privateTooManyConn()
-	if err != nil {
-		return &Row{err: err}
-	}
+	// err := d.privateTooManyConn()
+	// if err != nil {
+	// 	return &Row{err: err}
+	// }
 
 	return &Row{
 		d.QueryRowContext(d.Ctx, cmd, args...), nil}
@@ -218,16 +219,16 @@ func cmdtostring(cmd string, args ...interface{}) string {
 	return cmd
 }
 
-func (d *Db) privateTooManyConn() error {
-	timeout := time.Microsecond * 10
-	for d.Stats().OpenConnections >= d.maxConn {
-		if timeout.Microseconds() < d.sc.ReadTimeout.Microseconds()/2 {
-			time.Sleep(timeout)
-			timeout = timeout * 2
-		} else {
-			return errors.New("read io timeout, more than " + d.sc.ReadTimeout.String())
-		}
+// func (d *Db) privateTooManyConn() error {
+// 	timeout := time.Microsecond * 10
+// 	for d.Stats().OpenConnections >= d.maxConn {
+// 		if timeout.Microseconds() < d.sc.ReadTimeout.Microseconds()/2 {
+// 			time.Sleep(timeout)
+// 			timeout = timeout * 2
+// 		} else {
+// 			return errors.New("read io timeout, more than " + d.sc.ReadTimeout.String())
+// 		}
 
-	}
-	return nil
-}
+// 	}
+// 	return nil
+// }
