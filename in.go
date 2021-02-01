@@ -54,13 +54,14 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 				// 	return cmd, vs, err
 				// }
 				vs = append(vs, "")
-			} else if l == 1 {
-				// cmd, err = findStrIndex(cmd, index, false)
-				// if err != nil {
-				// 	return cmd, vs, err
-				// }
-				vs = append(vs, svv[0])
-			} else if l > 1 {
+				// } else if l == 1 {
+				// 	// cmd, err = findStrIndex(cmd, index, false)
+				// 	// if err != nil {
+				// 	// 	return cmd, vs, err
+				// 	// }
+
+				// 	vs = append(vs, svv[0])
+			} else if l >= 1 {
 				cmd, err = replace(cmd, inIndex, l)
 				if err != nil {
 					return cmd, vs, err
@@ -75,7 +76,6 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 
 		// 不是数组的话， 直接返回
 	}
-
 	return cmd, vs, nil
 }
 
@@ -221,6 +221,7 @@ func (d *Db) GetRowsIn(cmd string, args ...interface{}) (*sql.Rows, error) {
 }
 
 func (d *Db) GetOneIn(cmd string, args ...interface{}) *Row {
+	fmt.Println(args)
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
 		panic(err)

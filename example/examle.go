@@ -3,59 +3,43 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/hyahm/gomysql"
 )
 
 var (
 	conf = &gomysql.Sqlconfig{
-		Host:         "192.168.0.107",
+		Host:         "192.168.50.250",
 		Port:         3306,
-		UserName:     "cander",
+		UserName:     "test",
 		Password:     "123456",
-		DbName:       "test",
-		MaxOpenConns: 1,
+		DbName:       "xilin",
+		MaxOpenConns: 10,
+		MaxIdleConns: 1,
 	}
 )
 
 func main() {
-
 	db, err := conf.NewDb()
-	if err != nil {
-		panic(err)
-	}
-	s, err := db.InsertMany("insert into test(name, age) values(?,?)", "test3", 11, "test4", 2, "test3", 5)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(s)
+	time.Sleep(time.Second * 3)
 
 	var id int64
-	err = db.GetOneIn("select * from xxx where id=? and a in (?) and b in (?) and name=?",
-		6666,
-		(gomysql.InArgs)([]string{"1", "2", "4", "5", "6", "7", "8", "89", "3", "4"}).ToInArgs(),
-		(gomysql.InArgs)([]string{"aaa", "bbb"}).ToInArgs(),
-		"cander").Scan(&id)
+
+	countArgs := make([]interface{}, 0)
+	statuslist := []string{"12"}
+	myproject := []string{"21", "23", "25"}
+	countArgs = append(countArgs, (gomysql.InArgs)(statuslist).ToInArgs())
+	countArgs = append(countArgs, (gomysql.InArgs)(myproject).ToInArgs())
+	db.OpenDebug()
+	err = db.GetOneIn("select id from user a in (?) and b in (?)", countArgs...).Scan(&id)
 	fmt.Println(db.GetSql())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(id)
-	// _, err = db.GetRows("select id from dp_book")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// rows.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(id)
 
-	// rows.Close()
-	// var id int
-	// for rows.Next() {
-
-	// 	err = rows.Scan(&id)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		continue
-	// 	}
-	// 	fmt.Println(id)
-	// }
 }

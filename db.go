@@ -196,6 +196,7 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *Row {
 	defer func() {
 		<-ch
 	}()
+
 	// err := d.privateTooManyConn()
 	// if err != nil {
 	// 	return &Row{err: err}
