@@ -14,9 +14,9 @@ var (
 		Port:         3306,
 		UserName:     "test",
 		Password:     "123456",
-		DbName:       "xilin",
+		DbName:       "kaisa",
 		MaxOpenConns: 10,
-		MaxIdleConns: 1,
+		MaxIdleConns: 10,
 	}
 )
 
@@ -29,13 +29,8 @@ func main() {
 
 	var id int64
 
-	countArgs := make([]interface{}, 0)
-	statuslist := []string{"12"}
-	myproject := []string{"21", "23", "25"}
-	countArgs = append(countArgs, (gomysql.InArgs)(statuslist).ToInArgs())
-	countArgs = append(countArgs, (gomysql.InArgs)(myproject).ToInArgs())
 	db.OpenDebug()
-	err = db.GetOneIn("select id from user a in (?) and b in (?)", countArgs...).Scan(&id)
+	err = db.GetOneIn("select id from subcategory where category_id in (?) and name in (?)", []string{"1"}, []string{"21", "23", "25"}).Scan(&id)
 	fmt.Println(db.GetSql())
 	if err != nil {
 		log.Fatal(err)
