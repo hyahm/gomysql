@@ -14,7 +14,7 @@ var (
 		Port:         3306,
 		UserName:     "test",
 		Password:     "123456",
-		DbName:       "kaisa",
+		DbName:       "mysql",
 		MaxOpenConns: 10,
 		MaxIdleConns: 10,
 	}

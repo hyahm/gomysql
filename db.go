@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -27,6 +28,7 @@ type Db struct {
 }
 
 func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error) {
+
 	if d.sc.WriteLogWhenFailed {
 		d.sql = cmdtostring(cmd, args...)
 		d.mu.Lock()
@@ -39,11 +41,38 @@ func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error
 }
 
 func (d *Db) GetConnections() int {
+
 	ch <- struct{}{}
 	defer func() {
 		<-ch
 	}()
 	return d.Stats().OpenConnections
+}
+
+func (d *Db) Switch(dbname string, overWrite ...bool) (*Db, error) {
+	// 切换到新的库， 并产生一个新的db
+	ow := false
+	if len(overWrite) > 0 {
+		ow = overWrite[0]
+	}
+	err := d.CreateDatabase(dbname, ow)
+	if err != nil {
+		return d, err
+	}
+
+	d.sc.DbName = dbname
+	return d.sc.NewDb()
+}
+
+func (d *Db) CreateDatabase(dbname string, overWrite bool) error {
+	if overWrite {
+		d.QueryRow("drop database " + dbname + " if exsits")
+	}
+	err := d.QueryRow("create database " + dbname).Err()
+	if err != nil && err.(*mysql.MySQLError).Number == 1007 {
+		return nil
+	}
+	return err
 }
 
 func (d *Db) OpenDebug() {
