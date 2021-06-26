@@ -48,7 +48,7 @@ func (s *Sqlconfig) GetMysqwlDataSource() string {
 
 // 如果tag 是空的, 那么默认dbname
 func (s *Sqlconfig) NewDb() (*Db, error) {
-	return s.conndb(s.GetdataSource())
+	return s.conndb(s.GetMysqwlDataSource())
 }
 
 func (s *Sqlconfig) conndb(conf string) (*Db, error) {
