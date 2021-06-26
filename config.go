@@ -38,15 +38,17 @@ type Sqlconfig struct {
 	LogFile                 string
 }
 
-// 如果tag 是空的, 那么默认dbname
-func (s *Sqlconfig) NewDb() (*Db, error) {
+func (s *Sqlconfig) GetMysqwlDataSource() string {
 	s.setDefaultConfig()
 	//判断是否是空map
-	connstring := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&clientFoundRows=%t&allowCleartextPasswords=%t&interpolateParams=%t&columnsWithAlias=%t&multiStatements=%t&parseTime=%t&tls=%t&readTimeout=%s&timeout=%s&allowOldPasswords=%t&loc=%s&maxAllowedPacket=%d&collation=%s&writeTimeout=%s",
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&clientFoundRows=%t&allowCleartextPasswords=%t&interpolateParams=%t&columnsWithAlias=%t&multiStatements=%t&parseTime=%t&tls=%t&readTimeout=%s&timeout=%s&allowOldPasswords=%t&loc=%s&maxAllowedPacket=%d&collation=%s&writeTimeout=%s",
 		s.UserName, s.Password, s.Host, s.Port, s.DbName, s.Charset, s.ClientFoundRows, s.AllowCleartextPasswords, s.InterpolateParams, s.ColumnsWithAlias, s.MultiStatements, s.ParseTime, s.TLS, s.ReadTimeout, s.Timeout, s.AllowCleartextPasswords, s.Loc, s.MaxAllowedPacket, s.Collation, s.WriteTimeout,
 	)
+}
 
-	return s.conndb(connstring)
+// 如果tag 是空的, 那么默认dbname
+func (s *Sqlconfig) NewDb() (*Db, error) {
+	return s.conndb(s.GetdataSource())
 }
 
 func (s *Sqlconfig) conndb(conf string) (*Db, error) {
