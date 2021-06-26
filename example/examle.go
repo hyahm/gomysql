@@ -3,54 +3,38 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/hyahm/gomysql"
 )
 
 var (
 	conf = &gomysql.Sqlconfig{
-		Host:         "192.168.0.107",
+		Host:         "192.168.50.250",
 		Port:         3306,
-		UserName:     "cander",
+		UserName:     "test",
 		Password:     "123456",
-		DbName:       "bug",
-		MaxOpenConns: 1,
+		DbName:       "kaisa",
+		MaxOpenConns: 10,
+		MaxIdleConns: 10,
 	}
 )
 
 func main() {
-
 	db, err := conf.NewDb()
 	if err != nil {
 		log.Fatal(err)
 	}
+	time.Sleep(time.Second * 3)
+
 	var id int64
+
 	db.OpenDebug()
-	db.GetOneIn("select * from xxx where id=? and a in (?) and b in (?) and name=?",
-		6666,
-		(gomysql.InArgs)([]string{"1", "2", "4", "5", "6", "7", "8", "89", "3", "4"}).ToInArgs(),
-		(gomysql.InArgs)([]string{"aaa", "bbb"}).ToInArgs(),
-		"cander").Scan(&id)
+	err = db.GetOneIn("select id from subcategory where category_id in (?) and name in (?)", []string{"1"}, []string{"21", "23", "25"}).Scan(&id)
 	fmt.Println(db.GetSql())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(id)
-	// _, err = db.GetRows("select id from dp_book")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// rows.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(id)
 
-	// rows.Close()
-	// var id int
-	// for rows.Next() {
-
-	// 	err = rows.Scan(&id)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		continue
-	// 	}
-	// 	fmt.Println(id)
-	// }
 }

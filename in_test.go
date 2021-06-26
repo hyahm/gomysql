@@ -21,8 +21,8 @@ func TestIn(t *testing.T) {
 			cmd:   "select * from xxx where id=? and a in (?) and b in (?) and name=?",
 			args: []interface{}{
 				6666,
-				(InArgs)([]string{"1", "2", "4", "5", "6", "7", "8", "89", "3", "4"}).ToInArgs(),
-				(InArgs)([]string{"aaa", "bbb"}).ToInArgs(),
+				[]string{"1", "2", "4", "5", "6", "7", "8", "89", "3", "4"},
+				[]string{"aaa", "bbb"},
 				"cander",
 			},
 			expectCmd:  "select * from xxx where id=? and a in (?,?,?,?,?,?,?,?,?,?) and name=?",
