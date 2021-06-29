@@ -14,7 +14,7 @@ type testData struct {
 	expectArgs []interface{}
 }
 
-func TestIn(t *testing.T) {
+func TestInArgs(t *testing.T) {
 	td := []testData{
 		{
 			title: "参数都有的 测试前后都有条件的",

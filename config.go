@@ -59,6 +59,7 @@ func (s *Sqlconfig) conndb(conf string) (*Db, error) {
 	}
 
 	if err = conn.Ping(); err != nil {
+		conn.Close()
 		return nil, err
 	}
 

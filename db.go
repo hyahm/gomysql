@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/hyahm/golog"
 )
 
 type Db struct {
@@ -49,7 +51,7 @@ func (d *Db) GetConnections() int {
 	return d.Stats().OpenConnections
 }
 
-func (d *Db) Switch(dbname string, overWrite ...bool) (*Db, error) {
+func (d *Db) Use(dbname string, overWrite ...bool) (*Db, error) {
 	// 切换到新的库， 并产生一个新的db
 	ow := false
 	if len(overWrite) > 0 {
@@ -217,7 +219,7 @@ func (d *Db) Close() error {
 	return nil
 }
 
-func (d *Db) GetOne(cmd string, args ...interface{}) *Row {
+func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
@@ -231,8 +233,118 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *Row {
 	// 	return &Row{err: err}
 	// }
 
-	return &Row{
-		d.QueryRowContext(d.Ctx, cmd, args...), nil}
+	return d.QueryRowContext(d.Ctx, cmd, args...)
+}
+
+func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
+	if d.debug {
+		d.sql = cmdtostring(cmd, args...)
+	}
+	ch <- struct{}{}
+	defer func() {
+		<-ch
+	}()
+
+	rows, err := d.QueryContext(d.Ctx, cmd, args...)
+	if err != nil {
+		golog.Error(err)
+		return err
+	}
+	value := reflect.ValueOf(dest)
+	// cols := 0
+	// // json.Unmarshal returns errors for these
+	if value.Kind() != reflect.Ptr {
+		return errors.New("must pass a pointer, not a value, to StructScan destination")
+	}
+	// stt 是数组基础数据结构
+
+	stt := value.Type().Elem()
+
+	if stt.Kind() == reflect.Slice {
+		stt = stt.Elem()
+	}
+	names := make(map[string]int)
+	cls, err := rows.Columns()
+	if err != nil {
+		golog.Error(err)
+	}
+
+	for i, v := range cls {
+		names[v] = i
+	}
+	aa := value.Elem()
+
+	vals := make([][]byte, stt.NumField())
+	//这里表示一行填充数据
+	scans := make([]interface{}, len(cls))
+	//这里scans引用vals，把数据填充到[]byte里
+	for k, _ := range vals {
+		scans[k] = &vals[k]
+	}
+	index := 0
+	for rows.Next() {
+		// scan into the struct field pointers and append to our results
+		err = rows.Scan(scans...)
+		golog.Error(err)
+		golog.Info(scans)
+		new := reflect.New(stt).Elem()
+		for i := 0; i < stt.NumField(); i++ {
+			dbname := stt.Field(i).Tag.Get("db")
+			if dbname == "" {
+				continue
+			}
+
+			if v, ok := names[dbname]; ok {
+				if new.Field(i).CanSet() {
+					// 判断这一列的值
+					golog.Info(new.Field(i).Kind())
+					kind := new.Field(i).Kind()
+					switch kind {
+					case reflect.String:
+						golog.Info(string(*(scans[v]).(*[]byte)))
+						// new.Field(i).SetString(string())
+					default:
+						golog.Info(kind)
+					}
+					// new.Field(i).Set()
+				}
+			}
+
+		}
+		aa.Index(index).Set(new)
+		index++
+		// value.Elem().Kind() = append(value.Elem(), )
+		// for _, v := range scans {
+		// 	golog.Info(string(*v.([]byte)))
+		// }
+		// // if err != nil {
+		// 	golog.Error(err)
+		// 	return err
+		// }
+		// golog.Infof("%#v", values)
+		// if reflect.TypeOf(dest).Kind() == reflect.Ptr {
+		// 	direct.Set(reflect.Append(direct, vp))
+		// } else {
+		// 	direct.Set(reflect.Append(direct, v))
+		// }
+	}
+	// } else {
+	// for rows.Next() {
+	// 	vp = reflect.New(base)
+	// 	err = rows.Scan(vp.Interface())
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	// append
+	// 	if isPtr {
+	// 		direct.Set(reflect.Append(direct, vp))
+	// 	} else {
+	// 		direct.Set(reflect.Append(direct, reflect.Indirect(vp)))
+	// 	}
+	// }
+	// }
+
+	return nil
 }
 
 // 还原sql
