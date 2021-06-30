@@ -15,7 +15,6 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/hyahm/golog"
 )
 
 type Db struct {
@@ -246,7 +245,6 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 
 	rows, err := d.QueryContext(d.Ctx, cmd, args...)
 	if err != nil {
-		golog.Error(err)
 		return err
 	}
 	// 需要设置的值
@@ -272,10 +270,7 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 
 	aa := value.Elem()
 	names := make(map[string]int)
-	cls, err := rows.Columns()
-	if err != nil {
-		golog.Error(err)
-	}
+	cls, _ := rows.Columns()
 
 	for i, v := range cls {
 		names[v] = i
@@ -335,30 +330,23 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 
 					case reflect.Slice, reflect.Struct:
 						j := reflect.New(newvalue.Field(index).Type())
-						golog.Info(j.Type().Kind())
-						err = json.Unmarshal(b, j.Interface())
-						if err != nil {
-							golog.Error(err)
-						}
+						json.Unmarshal(b, j.Interface())
+
 						newvalue.Field(index).Set(j.Elem())
 
 					case reflect.Ptr:
 						j := reflect.New(newvalue.Field(index).Type())
-						golog.Info(j.Type().Kind())
-						err = json.Unmarshal(b, j.Interface())
-						if err != nil {
-							golog.Error(err)
-						}
+						json.Unmarshal(b, j.Interface())
+
 						newvalue.Field(index).Set(j)
 					default:
-						golog.Info(kind)
+						fmt.Println("not support , you can add issue: ", kind)
 					}
 					// new.Field(i).Set()
 				}
 			}
 
 		}
-		golog.Info(new)
 		aa = reflect.Append(aa, new)
 	}
 	value.Elem().Set(aa)
