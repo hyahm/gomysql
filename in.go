@@ -128,3 +128,11 @@ func (d *Db) GetOneIn(cmd string, args ...interface{}) *sql.Row {
 	}
 	return d.GetOne(newcmd, newargs...)
 }
+
+func (d *Db) SelectIn(dest interface{}, cmd string, args ...interface{}) error {
+	newcmd, newargs, err := makeArgs(cmd, args...)
+	if err != nil {
+		return err
+	}
+	return d.Select(dest, newcmd, newargs...)
+}

@@ -3,10 +3,12 @@ package gomysql
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -228,15 +230,12 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 		<-ch
 	}()
 
-	// err := d.privateTooManyConn()
-	// if err != nil {
-	// 	return &Row{err: err}
-	// }
-
 	return d.QueryRowContext(d.Ctx, cmd, args...)
 }
 
 func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
+	// 传入切片的地址， 根据tag 的 db 自动补充，
+	// 最求性能建议还是使用 GetRows or GetOne
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
@@ -250,6 +249,7 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 		golog.Error(err)
 		return err
 	}
+	// 需要设置的值
 	value := reflect.ValueOf(dest)
 	// cols := 0
 	// // json.Unmarshal returns errors for these
@@ -263,6 +263,14 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 	if stt.Kind() == reflect.Slice {
 		stt = stt.Elem()
 	}
+	isPtr := false
+
+	if stt.Kind() == reflect.Ptr {
+		isPtr = true
+		stt = stt.Elem()
+	}
+
+	aa := value.Elem()
 	names := make(map[string]int)
 	cls, err := rows.Columns()
 	if err != nil {
@@ -272,37 +280,76 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 	for i, v := range cls {
 		names[v] = i
 	}
-	aa := value.Elem()
 
-	vals := make([][]byte, stt.NumField())
+	vals := make([][]byte, len(cls))
 	//这里表示一行填充数据
 	scans := make([]interface{}, len(cls))
 	//这里scans引用vals，把数据填充到[]byte里
-	for k, _ := range vals {
+	for k := range vals {
 		scans[k] = &vals[k]
 	}
-	index := 0
 	for rows.Next() {
 		// scan into the struct field pointers and append to our results
 		err = rows.Scan(scans...)
-		golog.Error(err)
-		golog.Info(scans)
-		new := reflect.New(stt).Elem()
-		for i := 0; i < stt.NumField(); i++ {
-			dbname := stt.Field(i).Tag.Get("db")
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		new := reflect.New(stt)
+		if !isPtr {
+			new = new.Elem()
+		}
+		newvalue := new.Elem()
+		for index := 0; index < stt.NumField(); index++ {
+			dbname := stt.Field(index).Tag.Get("db")
 			if dbname == "" {
 				continue
 			}
 
 			if v, ok := names[dbname]; ok {
-				if new.Field(i).CanSet() {
+				if newvalue.Field(index).CanSet() {
 					// 判断这一列的值
-					golog.Info(new.Field(i).Kind())
-					kind := new.Field(i).Kind()
+					kind := newvalue.Field(index).Kind()
+					b := *(scans[v]).(*[]byte)
 					switch kind {
 					case reflect.String:
-						golog.Info(string(*(scans[v]).(*[]byte)))
-						// new.Field(i).SetString(string())
+						newvalue.Field(index).SetString(string(b))
+					case reflect.Int64:
+						i64, _ := strconv.ParseInt(string(b), 10, 64)
+						newvalue.Field(index).SetInt(i64)
+					case reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32:
+						i, _ := strconv.Atoi(string(b))
+						newvalue.Field(index).Set(reflect.ValueOf(i))
+
+					case reflect.Bool:
+						t, _ := strconv.ParseBool(string(b))
+						newvalue.Field(index).SetBool(t)
+
+					case reflect.Float32:
+						f64, _ := strconv.ParseFloat(string(b), 32)
+						newvalue.Field(index).SetFloat(f64)
+
+					case reflect.Float64:
+						f64, _ := strconv.ParseFloat(string(b), 64)
+						newvalue.Field(index).SetFloat(f64)
+
+					case reflect.Slice, reflect.Struct:
+						j := reflect.New(newvalue.Field(index).Type())
+						golog.Info(j.Type().Kind())
+						err = json.Unmarshal(b, j.Interface())
+						if err != nil {
+							golog.Error(err)
+						}
+						newvalue.Field(index).Set(j.Elem())
+
+					case reflect.Ptr:
+						j := reflect.New(newvalue.Field(index).Type())
+						golog.Info(j.Type().Kind())
+						err = json.Unmarshal(b, j.Interface())
+						if err != nil {
+							golog.Error(err)
+						}
+						newvalue.Field(index).Set(j)
 					default:
 						golog.Info(kind)
 					}
@@ -311,39 +358,10 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 			}
 
 		}
-		aa.Index(index).Set(new)
-		index++
-		// value.Elem().Kind() = append(value.Elem(), )
-		// for _, v := range scans {
-		// 	golog.Info(string(*v.([]byte)))
-		// }
-		// // if err != nil {
-		// 	golog.Error(err)
-		// 	return err
-		// }
-		// golog.Infof("%#v", values)
-		// if reflect.TypeOf(dest).Kind() == reflect.Ptr {
-		// 	direct.Set(reflect.Append(direct, vp))
-		// } else {
-		// 	direct.Set(reflect.Append(direct, v))
-		// }
+		golog.Info(new)
+		aa = reflect.Append(aa, new)
 	}
-	// } else {
-	// for rows.Next() {
-	// 	vp = reflect.New(base)
-	// 	err = rows.Scan(vp.Interface())
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	// append
-	// 	if isPtr {
-	// 		direct.Set(reflect.Append(direct, vp))
-	// 	} else {
-	// 		direct.Set(reflect.Append(direct, reflect.Indirect(vp)))
-	// 	}
-	// }
-	// }
-
+	value.Elem().Set(aa)
 	return nil
 }
 
@@ -360,17 +378,3 @@ func cmdtostring(cmd string, args ...interface{}) string {
 	}
 	return cmd
 }
-
-// func (d *Db) privateTooManyConn() error {
-// 	timeout := time.Microsecond * 10
-// 	for d.Stats().OpenConnections >= d.maxConn {
-// 		if timeout.Microseconds() < d.sc.ReadTimeout.Microseconds()/2 {
-// 			time.Sleep(timeout)
-// 			timeout = timeout * 2
-// 		} else {
-// 			return errors.New("read io timeout, more than " + d.sc.ReadTimeout.String())
-// 		}
-
-// 	}
-// 	return nil
-// }
