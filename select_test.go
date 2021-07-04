@@ -7,12 +7,6 @@ import (
 	"github.com/hyahm/golog"
 )
 
-type Person struct {
-	FirstName string `db:"first_name"`
-	LastName  string `db:"last_name"`
-	Email     string `db:"email"`
-}
-
 type Paipan struct {
 	ID          int64           `db:"id"`
 	Name        string          `db:"name"`
@@ -52,7 +46,6 @@ func TestSelect(t *testing.T) {
 		Host:            "192.168.101.4",
 		MultiStatements: true,
 	}
-	golog.Info(11111111)
 	db, err := conf.NewDb()
 	if err != nil {
 		t.Fatal(err)

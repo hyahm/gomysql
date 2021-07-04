@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/hyahm/golog"
 )
 
 type Db struct {
@@ -249,23 +250,24 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 	}
 	// 需要设置的值
 	value := reflect.ValueOf(dest)
+	typ := reflect.TypeOf(dest)
 	// cols := 0
 	// // json.Unmarshal returns errors for these
-	if value.Kind() != reflect.Ptr {
+	if typ.Kind() != reflect.Ptr {
 		return errors.New("must pass a pointer, not a value, to StructScan destination")
 	}
 	// stt 是数组基础数据结构
 
-	stt := value.Type().Elem()
+	typ = typ.Elem()
 
-	if stt.Kind() == reflect.Slice {
-		stt = stt.Elem()
+	if typ.Kind() == reflect.Slice {
+		typ = typ.Elem()
 	}
 	isPtr := false
 
-	if stt.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Ptr {
 		isPtr = true
-		stt = stt.Elem()
+		typ = typ.Elem()
 	}
 
 	aa := value.Elem()
@@ -290,13 +292,13 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 			fmt.Println(err)
 			continue
 		}
-		new := reflect.New(stt)
+		new := reflect.New(typ)
 		if !isPtr {
 			new = new.Elem()
 		}
 		newvalue := new.Elem()
-		for index := 0; index < stt.NumField(); index++ {
-			dbname := stt.Field(index).Tag.Get("db")
+		for index := 0; index < typ.NumField(); index++ {
+			dbname := typ.Field(index).Tag.Get("db")
 			if dbname == "" {
 				continue
 			}
@@ -352,9 +354,162 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 	return nil
 }
 
-func (d *Db) InsertWithoutID(dest interface{}, cmd string, args ...interface{}) error {
-	reflect.ValueOf(dest)
+func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interface{}) ([]int64, error) {
+	if !strings.Contains(cmd, "$key") {
+		return nil, errors.New("not found placeholders $key")
+	}
+
+	if !strings.Contains(cmd, "$value") {
+		return nil, errors.New("not found placeholders $value")
+	}
+	typ := reflect.TypeOf(dest)
+	value := reflect.ValueOf(dest)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		value = value.Elem()
+	}
+
+	if typ.Kind() == reflect.Struct {
+		id, err := d.insertInterface(dest, cmd, args...)
+		return []int64{id}, err
+	}
+	ids := make([]int64, 0)
+	if typ.Kind() == reflect.Slice {
+		// 如果是切片， 那么每个值都做一次处理
+		length := value.Len()
+
+		for i := 0; i < length; i++ {
+			golog.Info(value.Index(i))
+			golog.Info(value.Index(i).CanSet())
+			id, err := d.insertInterface(value.Index(i).Interface(), cmd, args...)
+			if err != nil {
+				return ids, err
+			}
+			ids = append(ids, id)
+		}
+	}
+	return ids, nil
+}
+
+// 插入字段的占位符 $key, $value
+func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...interface{}) error {
+	if !strings.Contains(cmd, "$key") {
+		return errors.New("not found placeholders $key")
+	}
+
+	if !strings.Contains(cmd, "$value") {
+		return errors.New("not found placeholders $value")
+	}
+	typ := reflect.TypeOf(dest)
+	value := reflect.ValueOf(dest)
+	if typ.Kind() == reflect.Ptr {
+		typ = typ.Elem()
+		value = value.Elem()
+	}
+	if typ.Kind() == reflect.Struct {
+		_, err := d.insertInterface(dest, cmd, args...)
+		return err
+	}
+
+	if typ.Kind() == reflect.Slice {
+		// 如果是切片， 那么每个值都做一次处理
+		length := value.Len()
+
+		for i := 0; i < length; i++ {
+			golog.Info(value.Index(i))
+			_, err := d.insertInterface(value.Index(i).Interface(), cmd, args...)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
+}
+
+func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) (int64, error) {
+	// 插入到args之前  dest 是struct或切片的指针
+	values := make([]interface{}, 0)
+	keys := make([]string, 0)
+	// ？号
+	placeholders := make([]string, 0)
+	typ := reflect.TypeOf(dest)
+	value := reflect.ValueOf(dest)
+
+	if typ.Kind() == reflect.Ptr {
+		value = value.Elem()
+		typ = typ.Elem()
+	}
+
+	if typ.Kind() == reflect.Struct {
+		// 如果是struct， 执行插入
+		for i := 0; i < value.NumField(); i++ {
+			key := typ.Field(i).Tag.Get("db")
+			golog.Info(strings.Split(key, ","))
+			if key == "" {
+				continue
+
+			}
+			signs := strings.Split(key, ",")
+			kind := value.Field(i).Kind()
+			golog.Info(kind)
+			switch kind {
+			case reflect.String:
+				if value.Field(i).Interface().(string) == "" && strings.Contains(key, "omitempty") {
+					continue
+				}
+				keys = append(keys, signs[0])
+				placeholders = append(placeholders, "?")
+				values = append(values, value.Field(i).Interface())
+			case reflect.Int64,
+				reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32, reflect.Float32, reflect.Float64:
+				if value.Field(i).Interface().(float64) == 0 && strings.Contains(key, "omitempty") {
+					continue
+				}
+
+				keys = append(keys, signs[0])
+				placeholders = append(placeholders, "?")
+				values = append(values, value.Field(i).Interface())
+			case reflect.Bool:
+				keys = append(keys, signs[0])
+				placeholders = append(placeholders, "?")
+				values = append(values, value.Field(i).Interface())
+			case reflect.Slice, reflect.Ptr:
+				if value.Field(i).IsNil() {
+					if strings.Contains(key, "omitempty") {
+						continue
+					}
+					keys = append(keys, signs[0])
+					placeholders = append(placeholders, "?")
+					values = append(values, "")
+				} else {
+					keys = append(keys, signs[0])
+					placeholders = append(placeholders, "?")
+					send, err := json.Marshal(value.Field(i).Interface())
+					if err != nil {
+						values = append(values, "")
+						continue
+					}
+					values = append(values, send)
+				}
+			case reflect.Struct:
+				keys = append(keys, signs[0])
+				placeholders = append(placeholders, "?")
+				send, err := json.Marshal(value.Field(i).Interface())
+				if err != nil {
+					values = append(values, "")
+					continue
+				}
+				values = append(values, send)
+			default:
+				fmt.Println("not support , you can add issue: ", kind)
+			}
+		}
+	}
+
+	cmd = strings.Replace(cmd, "$key", strings.Join(keys, ","), 1)
+	cmd = strings.Replace(cmd, "$value", strings.Join(placeholders, ","), 1)
+	newargs := append(values, args...)
+	return d.Insert(cmd, newargs...)
 }
 
 func (d *Db) InsertWithID(dest interface{}, cmd string, args ...interface{}) error {
