@@ -473,9 +473,30 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 				keys = append(keys, signs[0])
 				placeholders = append(placeholders, "?")
 				values = append(values, value.Field(i).Interface())
-			case reflect.Slice, reflect.Ptr:
+			case reflect.Slice:
 				if value.Field(i).IsNil() {
-					if strings.Contains(key, "omitempty") {
+					if !strings.Contains(key, "omitempty") {
+						continue
+					}
+					keys = append(keys, signs[0])
+					placeholders = append(placeholders, "?")
+					values = append(values, "")
+				} else {
+					if value.Field(i).Len() == 0 && !strings.Contains(key, "omitempty") {
+						continue
+					}
+					keys = append(keys, signs[0])
+					placeholders = append(placeholders, "?")
+					send, err := json.Marshal(value.Field(i).Interface())
+					if err != nil {
+						values = append(values, "")
+						continue
+					}
+					values = append(values, send)
+				}
+			case reflect.Ptr:
+				if value.Field(i).IsNil() {
+					if !strings.Contains(key, "omitempty") {
 						continue
 					}
 					keys = append(keys, signs[0])
@@ -529,4 +550,105 @@ func cmdtostring(cmd string, args ...interface{}) string {
 		return fmt.Sprintf(cmd, newargs...)
 	}
 	return cmd
+}
+
+func (d *Db) UpdateInterface(dest interface{}, cmd string, args ...interface{}) (int64, error) {
+	// 插入到args之前  dest 是struct或切片的指针
+	if !strings.Contains(cmd, "$set") {
+		return 0, errors.New("not found placeholders $set")
+	}
+
+	// ？号
+	typ := reflect.TypeOf(dest)
+	value := reflect.ValueOf(dest)
+
+	if typ.Kind() == reflect.Ptr {
+		value = value.Elem()
+		typ = typ.Elem()
+	}
+
+	if typ.Kind() != reflect.Struct {
+		return 0, errors.New("dest must ptr or struct ")
+	}
+	values := make([]interface{}, 0)
+	keys := make([]string, 0)
+	// 如果是struct， 执行插入
+	for i := 0; i < value.NumField(); i++ {
+		key := typ.Field(i).Tag.Get("db")
+		golog.Info(strings.Split(key, ","))
+		if key == "" {
+			continue
+		}
+		signs := strings.Split(key, ",")
+		kind := value.Field(i).Kind()
+		switch kind {
+		case reflect.String:
+			if value.Field(i).Interface().(string) == "" && !strings.Contains(key, "force") {
+				continue
+			}
+			keys = append(keys, signs[0]+"=?")
+			values = append(values, value.Field(i).Interface())
+		case reflect.Int64,
+			reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32, reflect.Float32, reflect.Float64:
+			if value.Field(i) == reflect.ValueOf(0) && !strings.Contains(key, "force") {
+				continue
+			}
+
+			keys = append(keys, signs[0]+"=?")
+			values = append(values, value.Field(i).Interface())
+		case reflect.Bool:
+			keys = append(keys, signs[0]+"=?")
+			values = append(values, value.Field(i).Interface())
+		case reflect.Slice:
+			if value.Field(i).IsNil() {
+				if !strings.Contains(key, "force") {
+					continue
+				}
+				keys = append(keys, signs[0]+"=?")
+				values = append(values, "")
+			} else {
+				if value.Field(i).Len() == 0 && !strings.Contains(key, "force") {
+					continue
+				}
+				keys = append(keys, signs[0]+"=?")
+				send, err := json.Marshal(value.Field(i).Interface())
+				if err != nil {
+					values = append(values, "")
+					continue
+				}
+				values = append(values, send)
+			}
+		case reflect.Ptr:
+			if value.Field(i).IsNil() {
+				if !strings.Contains(key, "force") {
+					continue
+				}
+				keys = append(keys, signs[0]+"=?")
+				values = append(values, "")
+			} else {
+				keys = append(keys, signs[0]+"=?")
+				send, err := json.Marshal(value.Field(i).Interface())
+				if err != nil {
+					values = append(values, "")
+					continue
+				}
+				values = append(values, send)
+			}
+		case reflect.Struct:
+			keys = append(keys, signs[0]+"=?")
+			send, err := json.Marshal(value.Field(i).Interface())
+			if err != nil {
+				values = append(values, "")
+				continue
+			}
+			values = append(values, send)
+		default:
+			fmt.Println("not support , you can add issue: ", kind)
+		}
+	}
+
+	cmd = strings.Replace(cmd, "$set", strings.Join(keys, ","), 1)
+	golog.Info(cmd)
+	newargs := append(values, args...)
+	return d.Update(cmd, newargs...)
 }
