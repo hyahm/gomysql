@@ -15,7 +15,6 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/hyahm/golog"
 )
 
 type Db struct {
@@ -379,8 +378,6 @@ func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interfa
 		length := value.Len()
 
 		for i := 0; i < length; i++ {
-			golog.Info(value.Index(i))
-			golog.Info(value.Index(i).CanSet())
 			id, err := d.insertInterface(value.Index(i).Interface(), cmd, args...)
 			if err != nil {
 				return ids, err
@@ -416,7 +413,6 @@ func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...inte
 		length := value.Len()
 
 		for i := 0; i < length; i++ {
-			golog.Info(value.Index(i))
 			_, err := d.insertInterface(value.Index(i).Interface(), cmd, args...)
 			if err != nil {
 				return err
@@ -444,14 +440,12 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 		// 如果是struct， 执行插入
 		for i := 0; i < value.NumField(); i++ {
 			key := typ.Field(i).Tag.Get("db")
-			golog.Info(strings.Split(key, ","))
 			if key == "" {
 				continue
 
 			}
 			signs := strings.Split(key, ",")
 			kind := value.Field(i).Kind()
-			golog.Info(kind)
 			switch kind {
 			case reflect.String:
 				if value.Field(i) == reflect.ValueOf("") && strings.Contains(key, "omitempty") {
@@ -575,7 +569,6 @@ func (d *Db) UpdateInterface(dest interface{}, cmd string, args ...interface{}) 
 	// 如果是struct， 执行插入
 	for i := 0; i < value.NumField(); i++ {
 		key := typ.Field(i).Tag.Get("db")
-		golog.Info(strings.Split(key, ","))
 		if key == "" {
 			continue
 		}
@@ -648,7 +641,6 @@ func (d *Db) UpdateInterface(dest interface{}, cmd string, args ...interface{}) 
 	}
 
 	cmd = strings.Replace(cmd, "$set", strings.Join(keys, ","), 1)
-	golog.Info(cmd)
 	newargs := append(values, args...)
 	return d.Update(cmd, newargs...)
 }
