@@ -10,7 +10,7 @@ import (
 type Person struct {
 	FirstName string `db:"first_name"`
 	LastName  string `db:"last_name"`
-	Email     string
+	Email     string `db:"email"`
 }
 
 type Paipan struct {
@@ -46,10 +46,10 @@ func TestSelect(t *testing.T) {
 	defer golog.Sync()
 	conf := Sqlconfig{
 		UserName:        "test",
-		Password:        "p4yzlg9ESLlnq4vVYxFJ7@QW4eJnk3DQfYp@^W",
+		Password:        "123456",
 		Port:            3306,
-		DbName:          "shop",
-		Host:            "23.225.165.42",
+		DbName:          "test",
+		Host:            "192.168.101.4",
 		MultiStatements: true,
 	}
 	golog.Info(11111111)

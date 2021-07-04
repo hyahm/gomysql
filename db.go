@@ -342,7 +342,6 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 					default:
 						fmt.Println("not support , you can add issue: ", kind)
 					}
-					// new.Field(i).Set()
 				}
 			}
 
@@ -350,6 +349,16 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 		aa = reflect.Append(aa, new)
 	}
 	value.Elem().Set(aa)
+	return nil
+}
+
+func (d *Db) InsertWithoutID(dest interface{}, cmd string, args ...interface{}) error {
+	reflect.ValueOf(dest)
+	return nil
+}
+
+func (d *Db) InsertWithID(dest interface{}, cmd string, args ...interface{}) error {
+	reflect.ValueOf(dest)
 	return nil
 }
 
