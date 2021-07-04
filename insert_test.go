@@ -18,6 +18,7 @@ type Person struct {
 	LastName  string   `db:"last_name"`
 	Email     string   `db:"email,omitempty,force"`
 	Me        MeStruct `db:"me"`
+	TestJson  string   `db:"test"`
 }
 
 func TestInsert(t *testing.T) {
@@ -45,6 +46,7 @@ func TestInsert(t *testing.T) {
 			Y: 20,
 			Z: 30,
 		},
+		TestJson: "testaaaa",
 	}
 	pss := make([]*Person, 0)
 	for i := 0; i < 20; i++ {

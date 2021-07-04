@@ -93,6 +93,7 @@ type Person struct {
 	LastName  string   `db:"last_name"`
 	Email     string   `db:"email,omitempty,force"`
 	Me        MeStruct `db:"me"`
+	
 }
 
 

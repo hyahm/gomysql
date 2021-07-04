@@ -454,7 +454,7 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 			golog.Info(kind)
 			switch kind {
 			case reflect.String:
-				if value.Field(i).Interface().(string) == "" && strings.Contains(key, "omitempty") {
+				if value.Field(i) == reflect.ValueOf("") && strings.Contains(key, "omitempty") {
 					continue
 				}
 				keys = append(keys, signs[0])
@@ -462,7 +462,7 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 				values = append(values, value.Field(i).Interface())
 			case reflect.Int64,
 				reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32, reflect.Float32, reflect.Float64:
-				if value.Field(i).Interface().(float64) == 0 && strings.Contains(key, "omitempty") {
+				if value.Field(i) == reflect.ValueOf(0) && strings.Contains(key, "omitempty") {
 					continue
 				}
 
