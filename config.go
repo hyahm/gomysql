@@ -8,6 +8,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/hyahm/golog"
 )
 
 type Sqlconfig struct {
@@ -49,6 +51,26 @@ func (s *Sqlconfig) GetMysqwlDataSource() string {
 // 如果tag 是空的, 那么默认dbname
 func (s *Sqlconfig) NewDb() (*Db, error) {
 	return s.conndb(s.GetMysqwlDataSource())
+}
+
+// 不存在就创建database
+func (s *Sqlconfig) CreateDB(name string) (*Db, error) {
+	db, err := s.conndb(s.GetMysqwlDataSource())
+	if err != nil {
+		return nil, err
+	}
+	newdb, err := db.Use(name)
+	if err != nil {
+		golog.Error(err)
+		return nil, err
+	}
+	err = db.Close()
+	if err != nil {
+		golog.Error(err)
+		return nil, err
+	}
+
+	return newdb, err
 }
 
 func (s *Sqlconfig) conndb(conf string) (*Db, error) {

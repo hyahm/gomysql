@@ -8,14 +8,12 @@ import (
 )
 
 type Tx struct {
-	tx    *sql.Tx
-	conf  string
-	Ctx   context.Context
-	sql   string
-	debug bool
-	sc    *Sqlconfig
-	// f       *os.File
-	// mu      *sync.RWMutex
+	tx      *sql.Tx
+	conf    string
+	Ctx     context.Context
+	sql     string
+	debug   bool
+	sc      *Sqlconfig
 	maxConn int
 	db      *Db
 }

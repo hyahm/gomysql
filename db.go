@@ -63,8 +63,34 @@ func (d *Db) Use(dbname string, overWrite ...bool) (*Db, error) {
 		return d, err
 	}
 
-	d.sc.DbName = dbname
-	return d.sc.NewDb()
+	s := &Sqlconfig{
+		UserName:                d.sc.UserName,
+		Password:                d.sc.Password,
+		Host:                    d.sc.Host,
+		Port:                    d.sc.Port,
+		DbName:                  dbname,
+		ClientFoundRows:         d.sc.ClientFoundRows,
+		AllowCleartextPasswords: d.sc.AllowCleartextPasswords,
+		InterpolateParams:       d.sc.InterpolateParams,
+		ColumnsWithAlias:        d.sc.ColumnsWithAlias,
+		MultiStatements:         d.sc.MultiStatements,
+		ParseTime:               d.sc.ParseTime,
+		TLS:                     d.sc.TLS,
+		ReadTimeout:             d.sc.ReadTimeout,
+		Timeout:                 d.sc.Timeout,
+		WriteTimeout:            d.sc.WriteTimeout,
+		AllowOldPasswords:       d.sc.AllowOldPasswords,
+		Charset:                 d.sc.Charset,
+		Loc:                     d.sc.Loc,
+		MaxAllowedPacket:        d.sc.MaxAllowedPacket,
+		Collation:               d.sc.Collation,
+		MaxOpenConns:            d.sc.MaxOpenConns,
+		MaxIdleConns:            d.sc.MaxIdleConns,
+		ConnMaxLifetime:         d.sc.ConnMaxLifetime,
+		WriteLogWhenFailed:      d.sc.WriteLogWhenFailed,
+		LogFile:                 d.sc.LogFile,
+	}
+	return s.conndb(s.GetMysqwlDataSource())
 }
 
 func (d *Db) CreateDatabase(dbname string, overWrite bool) error {
@@ -207,18 +233,18 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 	return d.QueryContext(d.Ctx, cmd, args...)
 }
 
-func (d *Db) Close() error {
-	//存在并且不为空才关闭
-	defer func() {
-		for {
-			<-ch
-		}
-	}()
-	if d != nil {
-		return d.Close()
-	}
-	return nil
-}
+// func (d *Db) Close() error {
+// 	//存在并且不为空才关闭
+// 	// defer func() {
+// 	// 	for {
+// 	// 		<-ch
+// 	// 	}
+// 	// }()
+// 	if d != nil {
+// 		return d.Close()
+// 	}
+// 	return nil
+// }
 
 func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 	if d.debug {
