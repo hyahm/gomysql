@@ -20,74 +20,83 @@ var IgnoreCondition = []string{"where", "on"}
 // 如果后面有or 或者 and，只用删除or 或者and
 // 如果没有， 那么删除前面的 where 或者 on
 
-func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
-	// 如果问号跟参数对不上， 报错
-	count := strings.Count(cmd, "?")
+// func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
+// 	// 如果问号跟参数对不上， 报错
+// 	count := strings.Count(cmd, "?")
 
-	vs := make([]interface{}, 0)
-	if len(args) != count {
-		return "", vs, fmt.Errorf("params error, expect %d, got %d", count, len(args))
-	}
-	var err error
-	inIndex := 0
-	for _, value := range args {
-		typ := reflect.TypeOf(value)
-		vv := reflect.ValueOf(value)
+// 	// vs: 新的参数
+// 	vs := make([]interface{}, 0)
+// 	if len(args) != count {
+// 		return "", vs, fmt.Errorf("params error, expect %d, got %d", count, len(args))
+// 	}
+// 	var err error
+// 	inIndex := 0
+// 	// 找到in的索引
+// 	for _, value := range args {
+// 		typ := reflect.TypeOf(value)
+// 		vv := reflect.ValueOf(value)
 
-		if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice {
-			l := vv.Len()
-			if l == 0 {
-				vs = append(vs, "")
-			} else {
-				cmd, err = replace(cmd, inIndex, l)
-				if err != nil {
-					return cmd, vs, err
-				}
-				for i := 0; i < l; i++ {
-					vs = append(vs, vv.Index(i).Interface())
-				}
+// 		if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice {
+// 			l := vv.Len()
+// 			if l == 0 {
+// 				// 删除2边括号和前面2个空格的字符
+// 				// 先删除2边的括号
+// 				// 左边：
 
-				inIndex++
-			}
+// 				fmt.Println(vv.Interface())
+// 				vs = append(vs, "")
+// 			} else {
+// 				cmd, err = replace(cmd, inIndex, l)
+// 				if err != nil {
+// 					return cmd, vs, err
+// 				}
+// 				for i := 0; i < l; i++ {
+// 					vs = append(vs, vv.Index(i).Interface())
+// 				}
 
-		} else {
-			vs = append(vs, value)
-		}
+// 				inIndex++
+// 			}
 
-		// 不是数组的话， 直接返回
-	}
-	return cmd, vs, nil
-}
+// 		} else {
+// 			vs = append(vs, value)
+// 		}
 
-func replace(cmd string, index int, count int) (string, error) {
-	// 替换？,
-	// index: 替换第几个in的？
-	// count: 替换多少次
+// 		// 不是数组的话， 直接返回
+// 	}
+// 	fmt.Println(cmd)
+// 	fmt.Println(vs)
+// 	return cmd, vs, nil
+// }
 
-	// 先寻找in的位置, 然后寻找后面的?
-	tmp := strings.ToLower(cmd)
-	m := make([]string, count)
-	for j := 0; j < count; j++ {
-		m[j] = "?"
-	}
+// func replace(cmd string, index int, count int) (string, error) {
+// 	// 替换？,
+// 	// index: 替换第几个in的？
+// 	// count: 替换多少次
 
-	c := strings.Count(tmp, " in ")
-	if index > c-1 {
-		return "", ErrRangeOut
-	}
-	start := 0
-	for i := 0; i < c; i++ {
-		thisInIndex := strings.Index(tmp[start:], " in ")
-		// 找到后面第一个?
-		start += thisInIndex + 4
-		if index == i {
-			thisIndex := strings.Index(tmp[start:], "?")
-			start += thisIndex + 1
-			return tmp[:start-1] + strings.Join(m, ",") + tmp[start:], nil
-		}
-	}
-	return cmd, nil
-}
+// 	// 先寻找in的位置, 然后寻找后面的?
+// 	tmp := strings.ToLower(cmd)
+// 	m := make([]string, count)
+// 	for j := 0; j < count; j++ {
+// 		m[j] = "?"
+// 	}
+
+// 	c := strings.Count(tmp, " in ")
+// 	if index > c-1 {
+// 		return "", ErrRangeOut
+// 	}
+// 	start := 0
+// 	for i := 0; i < c; i++ {
+// 		thisInIndex := strings.Index(tmp[start:], " in ")
+// 		// 找到后面第一个?
+// 		start += thisInIndex + 4
+// 		if index == i {
+// 			thisIndex := strings.Index(tmp[start:], "?")
+// 			start += thisIndex + 1
+// 			return tmp[:start-1] + strings.Join(m, ",") + tmp[start:], nil
+// 		}
+// 	}
+// 	return cmd, nil
+// }
 
 func (d *Db) UpdateIn(cmd string, args ...interface{}) (int64, error) {
 	newcmd, newargs, err := makeArgs(cmd, args...)
@@ -135,4 +144,80 @@ func (d *Db) SelectIn(dest interface{}, cmd string, args ...interface{}) error {
 		return err
 	}
 	return d.Select(dest, newcmd, newargs...)
+}
+
+func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
+	// 如果问号跟参数对不上， 报错
+	count := strings.Count(cmd, "?")
+
+	// vs: 新的参数
+
+	if len(args) != count {
+		return "", nil, fmt.Errorf("params error, expect %d, got %d", count, len(args))
+	}
+	vs := make([]interface{}, 0)
+	// 找到？的索引
+	need := make([]string, 0)
+	cmdsplit := strings.Split(cmd, "?")
+	fmt.Println(cmdsplit)
+	for _, v := range cmdsplit {
+		fmt.Println(v)
+	}
+	for i, value := range args {
+		typ := reflect.TypeOf(value)
+
+		if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice {
+			invalue := reflect.ValueOf(args[i])
+			if invalue.Len() == 0 {
+				fmt.Printf("%#v", cmdsplit)
+				// 如果等于0，那么删除
+				// 删除此cmd(的和下一个cmd的)
+				fmt.Println(cmdsplit[i])
+				fmt.Println(cmdsplit[i+1])
+				end := strings.LastIndex(cmdsplit[i], "(")
+				start := strings.Index(cmdsplit[i+1], ")")
+				if end < 0 || start < 0 {
+					return "", nil, errors.New("sql error")
+				}
+				cmdsplit[i+1] = cmdsplit[i+1][start+1:]
+				// argsplit[value] = argsplit[value][:end]
+				// 还要删除前面的in
+				endin := strings.LastIndex(cmdsplit[i], "in")
+				cmdsplit[i] = cmdsplit[i][:endin]
+
+				cmdsplit[i] = strings.Trim(cmdsplit[i], " ")
+				// 删除前面的word
+				endspace := strings.LastIndex(cmdsplit[i], " ")
+				cmdsplit[i] = cmdsplit[i][:endspace]
+				// 删完后加上 1=0
+				cmdsplit[i] += " 1=0 "
+
+				// 最后参数位置也要删掉
+				// 判断是不是最后一个
+				// 把当前的和下一个合并， 下一个的值为""
+				need = append(need, "")
+			} else {
+
+				// 如果不为0的话，还是合并，不过添加了参数个的?
+				wenhao := make([]string, invalue.Len())
+				for i := 0; i < invalue.Len(); i++ {
+					wenhao[i] = "?"
+					vs = append(vs, invalue.Index(i))
+
+				}
+				need = append(need, strings.Join(wenhao, ","))
+			}
+			continue
+		}
+		need = append(need, "?")
+		vs = append(vs, args[i])
+		// 不是数组的话， 直接返回
+	}
+	// 去掉空值的
+	cmds := ""
+	for i := range need {
+		cmds += cmdsplit[i] + " " + need[i] + " "
+	}
+	cmds += " " + cmdsplit[len(need)]
+	return cmds, vs, nil
 }

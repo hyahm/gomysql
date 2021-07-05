@@ -14,6 +14,22 @@ type testData struct {
 	expectArgs []interface{}
 }
 
+func TestString(t *testing.T) {
+	a := "select * from xxx where id=? and a in (?) and b in (?) and name=?"
+	args := []interface{}{
+		6666,
+		[]string{"1", "2", "4", "5", "6", "7", "8", "89", "3", "4"},
+		[]string{},
+		"cander",
+	}
+	cmd, args, err := makeArgs(a, args...)
+	if err != nil {
+		t.Log(err)
+	}
+	t.Log(cmd)
+	t.Log(args)
+}
+
 func TestInArgs(t *testing.T) {
 	td := []testData{
 		{
@@ -22,7 +38,7 @@ func TestInArgs(t *testing.T) {
 			args: []interface{}{
 				6666,
 				[]string{"1", "2", "4", "5", "6", "7", "8", "89", "3", "4"},
-				[]string{"aaa", "bbb"},
+				[]string{},
 				"cander",
 			},
 			expectCmd:  "select * from xxx where id=? and a in (?,?,?,?,?,?,?,?,?,?) and name=?",
@@ -40,6 +56,8 @@ func run(t *testing.T, td testData) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Log(cmd)
+	t.Log(args)
 	if strings.Trim(cmd, " ") == td.expectCmd {
 	} else {
 		t.Log("title", td.title)
