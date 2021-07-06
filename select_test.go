@@ -53,16 +53,93 @@ func TestSelect(t *testing.T) {
 	// db.Query(schema)
 	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "Jason", "Moiron", "jmoiron@jmoiron.net")
 	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "John", "Doe", "johndoeDNE@gmail.net")
-	persons := make([]*Category, 0)
-	err = db.Select(&persons, "select * from category")
+	persons := &Person{}
+	err = db.Select(&persons, "select * from person limit 1")
 	if err != nil {
 		golog.Error(err)
 	}
-	golog.Info(len(persons))
-	for _, v := range persons {
-		golog.Infof("%#v", *v)
-	}
+	golog.Info(persons)
+	// 建表
 
+}
+
+func TestSelect1(t *testing.T) {
+	defer golog.Sync()
+	conf := Sqlconfig{
+		UserName:        "test",
+		Password:        "123456",
+		Port:            3306,
+		DbName:          "test",
+		Host:            "192.168.101.4",
+		MultiStatements: true,
+	}
+	db, err := conf.NewDb()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// db.Query(schema)
+	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "Jason", "Moiron", "jmoiron@jmoiron.net")
+	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "John", "Doe", "johndoeDNE@gmail.net")
+	persons := make([]Person, 0)
+	err = db.Select(&persons, "select * from person limit 1")
+	if err != nil {
+		golog.Error(err)
+	}
+	golog.Info(persons)
+	// 建表
+
+}
+
+func TestSelect2(t *testing.T) {
+	defer golog.Sync()
+	conf := Sqlconfig{
+		UserName:        "test",
+		Password:        "123456",
+		Port:            3306,
+		DbName:          "test",
+		Host:            "192.168.101.4",
+		MultiStatements: true,
+	}
+	db, err := conf.NewDb()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// db.Query(schema)
+	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "Jason", "Moiron", "jmoiron@jmoiron.net")
+	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "John", "Doe", "johndoeDNE@gmail.net")
+	persons := make([]*Person, 0)
+	err = db.Select(&persons, "select * from person limit 1")
+	if err != nil {
+		golog.Error(err)
+	}
+	golog.Info(*persons[0])
+	// 建表
+
+}
+
+func TestSelect3(t *testing.T) {
+	defer golog.Sync()
+	conf := Sqlconfig{
+		UserName:        "test",
+		Password:        "123456",
+		Port:            3306,
+		DbName:          "test",
+		Host:            "192.168.101.4",
+		MultiStatements: true,
+	}
+	db, err := conf.NewDb()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// db.Query(schema)
+	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "Jason", "Moiron", "jmoiron@jmoiron.net")
+	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "John", "Doe", "johndoeDNE@gmail.net")
+	persons := Person{}
+	err = db.Select(&persons, "select * from person limit 1")
+	if err != nil {
+		golog.Error(err)
+	}
+	golog.Info(persons)
 	// 建表
 
 }

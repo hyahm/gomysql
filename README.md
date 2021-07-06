@@ -159,7 +159,7 @@ func main() {
 	}
 	// 执行后会修改id为1的行
 	persons := make([]*Category, 0)
-	// 传入的必须是指针的数组， 如果结果只有一个值也必须指针数组
+
 	err = db.Select(&persons, "select * from Person")
 	if err != nil {
 		golog.Error(err)

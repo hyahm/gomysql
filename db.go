@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/hyahm/golog"
 )
 
 type Db struct {
@@ -233,19 +234,6 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 	return d.QueryContext(d.Ctx, cmd, args...)
 }
 
-// func (d *Db) Close() error {
-// 	//存在并且不为空才关闭
-// 	// defer func() {
-// 	// 	for {
-// 	// 		<-ch
-// 	// 	}
-// 	// }()
-// 	if d != nil {
-// 		return d.Close()
-// 	}
-// 	return nil
-// }
-
 func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
@@ -283,6 +271,151 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 	}
 	// stt 是数组基础数据结构
 
+	typ = typ.Elem()
+	// 判断是否是数组
+	isArr := false
+	if typ.Kind() == reflect.Slice {
+		typ = typ.Elem()
+		isArr = true
+	}
+	// 标识最后的接受体是指针还是结构体
+	isPtr := false
+	if typ.Kind() == reflect.Ptr {
+		isPtr = true
+		typ = typ.Elem()
+	}
+	// ss 是切片
+	ss := value.Elem()
+	names := make(map[string]int)
+	cls, _ := rows.Columns()
+	for i, v := range cls {
+		names[v] = i
+	}
+
+	vals := make([][]byte, len(cls))
+	//这里表示一行填充数据
+	scans := make([]interface{}, len(cls))
+	//这里scans引用vals，把数据填充到[]byte里
+	for k := range vals {
+		scans[k] = &vals[k]
+	}
+	for rows.Next() {
+		// scan into the struct field pointers and append to our results
+		err = rows.Scan(scans...)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		new := reflect.New(typ)
+		if !isPtr {
+			new = new.Elem()
+		}
+		if new.Type().Kind() == reflect.Ptr {
+			new = new.Elem()
+		}
+		for index := 0; index < typ.NumField(); index++ {
+			dbname := typ.Field(index).Tag.Get("db")
+			tags := strings.Split(dbname, ",")
+			if len(tags) < 0 {
+				continue
+			}
+			if tags[0] == "" {
+				continue
+			}
+
+			if v, ok := names[tags[0]]; ok {
+				if new.Field(index).CanSet() {
+					// 判断这一列的值
+					kind := new.Field(index).Kind()
+					b := *(scans[v]).(*[]byte)
+					switch kind {
+					case reflect.String:
+
+						new.Field(index).SetString(string(b))
+					case reflect.Int64:
+						i64, _ := strconv.ParseInt(string(b), 10, 64)
+						new.Field(index).SetInt(i64)
+					case reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32:
+						i, _ := strconv.Atoi(string(b))
+						new.Field(index).Set(reflect.ValueOf(i))
+
+					case reflect.Bool:
+						t, _ := strconv.ParseBool(string(b))
+						new.Field(index).SetBool(t)
+
+					case reflect.Float32:
+						f64, _ := strconv.ParseFloat(string(b), 32)
+						new.Field(index).SetFloat(f64)
+
+					case reflect.Float64:
+						f64, _ := strconv.ParseFloat(string(b), 64)
+						new.Field(index).SetFloat(f64)
+
+					case reflect.Slice, reflect.Struct:
+						j := reflect.New(new.Field(index).Type())
+						json.Unmarshal(b, j.Interface())
+
+						new.Field(index).Set(j.Elem())
+
+					case reflect.Ptr:
+						j := reflect.New(new.Field(index).Type())
+						json.Unmarshal(b, j.Interface())
+
+						new.Field(index).Set(j)
+					default:
+						fmt.Println("not support , you can add issue: ", kind)
+					}
+				} else {
+					golog.Info("can not set: ", index)
+				}
+			}
+
+		}
+		if !isArr {
+			if isPtr {
+				value.Elem().Elem().Set(new)
+			} else {
+				value.Elem().Set(new)
+			}
+
+			return nil
+		} else {
+			if isPtr {
+				ss = reflect.Append(ss, new.Addr())
+			} else {
+				ss = reflect.Append(ss, new)
+
+			}
+		}
+	}
+	value.Elem().Set(ss)
+	return nil
+}
+
+func (d *Db) SelectOne(dest interface{}, cmd string, args ...interface{}) error {
+	// 传入切片的地址， 根据tag 的 db 自动补充，
+	// 最求性能建议还是使用 GetRows or GetOne
+	if d.debug {
+		d.sql = cmdtostring(cmd, args...)
+	}
+	ch <- struct{}{}
+	defer func() {
+		<-ch
+	}()
+
+	// 需要设置的值
+	value := reflect.ValueOf(dest)
+	typ := reflect.TypeOf(dest)
+	// cols := 0
+	// // json.Unmarshal returns errors for these
+	if typ.Kind() != reflect.Ptr {
+		return errors.New("must pass a pointer, not a value, to StructScan destination")
+	}
+	// stt 是数组基础数据结构
+	rows, err := d.QueryContext(d.Ctx, cmd, args...)
+	if err != nil {
+		return err
+	}
 	typ = typ.Elem()
 
 	if typ.Kind() == reflect.Slice {
