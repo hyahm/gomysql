@@ -19,7 +19,7 @@ func TestString(t *testing.T) {
 	args := []interface{}{
 		6666,
 		[]string{"1", "2", "4", "5", "6", "7", "8", "89", "3", "4"},
-		[]string{},
+		[]int64{2},
 		"cander",
 	}
 	cmd, args, err := makeArgs(a, args...)

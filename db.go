@@ -495,9 +495,6 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 				values = append(values, value.Field(i).Interface())
 			case reflect.Slice:
 				if value.Field(i).IsNil() {
-					if !strings.Contains(key, "omitempty") {
-						continue
-					}
 					keys = append(keys, signs[0])
 					placeholders = append(placeholders, "?")
 					values = append(values, "")

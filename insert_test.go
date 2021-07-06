@@ -32,7 +32,6 @@ func TestInsert(t *testing.T) {
 		Host:            "192.168.101.4",
 		MultiStatements: true,
 	}
-	golog.Info(11111111)
 	db, err := conf.NewDb()
 	if err != nil {
 		t.Fatal(err)

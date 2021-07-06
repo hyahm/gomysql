@@ -202,7 +202,7 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 				wenhao := make([]string, invalue.Len())
 				for i := 0; i < invalue.Len(); i++ {
 					wenhao[i] = "?"
-					vs = append(vs, invalue.Index(i))
+					vs = append(vs, invalue.Index(i).Interface())
 
 				}
 				need = append(need, strings.Join(wenhao, ","))
