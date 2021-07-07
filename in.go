@@ -159,21 +159,14 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 	// 找到？的索引
 	need := make([]string, 0)
 	cmdsplit := strings.Split(cmd, "?")
-	fmt.Println(cmdsplit)
-	for _, v := range cmdsplit {
-		fmt.Println(v)
-	}
 	for i, value := range args {
 		typ := reflect.TypeOf(value)
 
 		if typ.Kind() == reflect.Array || typ.Kind() == reflect.Slice {
 			invalue := reflect.ValueOf(args[i])
 			if invalue.Len() == 0 {
-				fmt.Printf("%#v", cmdsplit)
 				// 如果等于0，那么删除
 				// 删除此cmd(的和下一个cmd的)
-				fmt.Println(cmdsplit[i])
-				fmt.Println(cmdsplit[i+1])
 				end := strings.LastIndex(cmdsplit[i], "(")
 				start := strings.Index(cmdsplit[i+1], ")")
 				if end < 0 || start < 0 {

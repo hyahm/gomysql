@@ -8,8 +8,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"github.com/hyahm/golog"
 )
 
 type Sqlconfig struct {
@@ -61,12 +59,10 @@ func (s *Sqlconfig) CreateDB(name string) (*Db, error) {
 	}
 	newdb, err := db.Use(name)
 	if err != nil {
-		golog.Error(err)
 		return nil, err
 	}
 	err = db.Close()
 	if err != nil {
-		golog.Error(err)
 		return nil, err
 	}
 
