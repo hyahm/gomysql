@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/hyahm/golog"
 )
 
 type Db struct {
@@ -233,19 +234,6 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 	return d.QueryContext(d.Ctx, cmd, args...)
 }
 
-// func (d *Db) Close() error {
-// 	//存在并且不为空才关闭
-// 	// defer func() {
-// 	// 	for {
-// 	// 		<-ch
-// 	// 	}
-// 	// }()
-// 	if d != nil {
-// 		return d.Close()
-// 	}
-// 	return nil
-// }
-
 func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
@@ -284,21 +272,22 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 	// stt 是数组基础数据结构
 
 	typ = typ.Elem()
-
+	// 判断是否是数组
+	isArr := false
 	if typ.Kind() == reflect.Slice {
 		typ = typ.Elem()
+		isArr = true
 	}
+	// 标识最后的接受体是指针还是结构体
 	isPtr := false
-
 	if typ.Kind() == reflect.Ptr {
 		isPtr = true
 		typ = typ.Elem()
 	}
-
-	aa := value.Elem()
+	// ss 是切片
+	ss := value.Elem()
 	names := make(map[string]int)
 	cls, _ := rows.Columns()
-
 	for i, v := range cls {
 		names[v] = i
 	}
@@ -321,61 +310,85 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 		if !isPtr {
 			new = new.Elem()
 		}
-		newvalue := new.Elem()
+		if new.Type().Kind() == reflect.Ptr {
+			new = new.Elem()
+		}
 		for index := 0; index < typ.NumField(); index++ {
 			dbname := typ.Field(index).Tag.Get("db")
-			if dbname == "" {
+			tags := strings.Split(dbname, ",")
+			if len(tags) < 0 {
+				continue
+			}
+			if tags[0] == "" {
 				continue
 			}
 
-			if v, ok := names[dbname]; ok {
-				if newvalue.Field(index).CanSet() {
+			if v, ok := names[tags[0]]; ok {
+				if new.Field(index).CanSet() {
 					// 判断这一列的值
-					kind := newvalue.Field(index).Kind()
+					kind := new.Field(index).Kind()
 					b := *(scans[v]).(*[]byte)
 					switch kind {
 					case reflect.String:
-						newvalue.Field(index).SetString(string(b))
+
+						new.Field(index).SetString(string(b))
 					case reflect.Int64:
 						i64, _ := strconv.ParseInt(string(b), 10, 64)
-						newvalue.Field(index).SetInt(i64)
+						new.Field(index).SetInt(i64)
 					case reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32:
 						i, _ := strconv.Atoi(string(b))
-						newvalue.Field(index).Set(reflect.ValueOf(i))
+						new.Field(index).Set(reflect.ValueOf(i))
 
 					case reflect.Bool:
 						t, _ := strconv.ParseBool(string(b))
-						newvalue.Field(index).SetBool(t)
+						new.Field(index).SetBool(t)
 
 					case reflect.Float32:
 						f64, _ := strconv.ParseFloat(string(b), 32)
-						newvalue.Field(index).SetFloat(f64)
+						new.Field(index).SetFloat(f64)
 
 					case reflect.Float64:
 						f64, _ := strconv.ParseFloat(string(b), 64)
-						newvalue.Field(index).SetFloat(f64)
+						new.Field(index).SetFloat(f64)
 
 					case reflect.Slice, reflect.Struct:
-						j := reflect.New(newvalue.Field(index).Type())
+						j := reflect.New(new.Field(index).Type())
 						json.Unmarshal(b, j.Interface())
 
-						newvalue.Field(index).Set(j.Elem())
+						new.Field(index).Set(j.Elem())
 
 					case reflect.Ptr:
-						j := reflect.New(newvalue.Field(index).Type())
+						j := reflect.New(new.Field(index).Type())
 						json.Unmarshal(b, j.Interface())
 
-						newvalue.Field(index).Set(j)
+						new.Field(index).Set(j)
 					default:
 						fmt.Println("not support , you can add issue: ", kind)
 					}
+				} else {
+					golog.Info("can not set: ", index)
 				}
 			}
 
 		}
-		aa = reflect.Append(aa, new)
+		if !isArr {
+			if isPtr {
+				value.Elem().Elem().Set(new)
+			} else {
+				value.Elem().Set(new)
+			}
+
+			return nil
+		} else {
+			if isPtr {
+				ss = reflect.Append(ss, new.Addr())
+			} else {
+				ss = reflect.Append(ss, new)
+
+			}
+		}
 	}
-	value.Elem().Set(aa)
+	value.Elem().Set(ss)
 	return nil
 }
 
