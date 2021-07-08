@@ -138,6 +138,30 @@ func (d *Db) GetOneIn(cmd string, args ...interface{}) *sql.Row {
 	return d.GetOne(newcmd, newargs...)
 }
 
+func (d *Db) UpdateInterfaceIn(dest interface{}, cmd string, args ...interface{}) (int64, error) {
+	newcmd, newargs, err := makeArgs(cmd, args...)
+	if err != nil {
+		return 0, err
+	}
+	return d.UpdateInterface(dest, newcmd, newargs...)
+}
+
+func (d *Db) InsertInterfaceWithoutIDIn(dest interface{}, cmd string, args ...interface{}) error {
+	newcmd, newargs, err := makeArgs(cmd, args...)
+	if err != nil {
+		return err
+	}
+	return d.InsertInterfaceWithoutID(dest, newcmd, newargs...)
+}
+
+func (d *Db) InsertInterfaceWithIDIn(dest interface{}, cmd string, args ...interface{}) ([]int64, error) {
+	newcmd, newargs, err := makeArgs(cmd, args...)
+	if err != nil {
+		return nil, err
+	}
+	return d.InsertInterfaceWithID(dest, newcmd, newargs...)
+}
+
 func (d *Db) SelectIn(dest interface{}, cmd string, args ...interface{}) error {
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {

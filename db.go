@@ -568,11 +568,6 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 	return d.Insert(cmd, newargs...)
 }
 
-func (d *Db) InsertWithID(dest interface{}, cmd string, args ...interface{}) error {
-	reflect.ValueOf(dest)
-	return nil
-}
-
 // 还原sql
 func cmdtostring(cmd string, args ...interface{}) string {
 	cmd = strings.Replace(cmd, "?", "%v", -1)
