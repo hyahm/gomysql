@@ -247,6 +247,7 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 }
 
 func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
+	// db.Select(&value, "select * from test")
 	// 传入切片的地址， 根据tag 的 db 自动补充，
 	// 最求性能建议还是使用 GetRows or GetOne
 	if d.debug {
@@ -393,6 +394,8 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 }
 
 func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interface{}) ([]int64, error) {
+	// $key 和 $value 固定位置固定值
+	// db.InsertInterfaceWithID(&value, "insert into test($key)  values($value)")
 	if !strings.Contains(cmd, "$key") {
 		return nil, errors.New("not found placeholders $key")
 	}
@@ -429,6 +432,8 @@ func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interfa
 
 // 插入字段的占位符 $key, $value
 func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...interface{}) error {
+	// $key 和 $value 固定位置固定值
+	// db.InsertInterfaceWithID(&value, "insert into test($key)  values($value)")
 	if !strings.Contains(cmd, "$key") {
 		return errors.New("not found placeholders $key")
 	}
@@ -583,6 +588,8 @@ func cmdtostring(cmd string, args ...interface{}) string {
 }
 
 func (d *Db) UpdateInterface(dest interface{}, cmd string, args ...interface{}) (int64, error) {
+	// $set 固定位置固定值
+	// db.UpdateInterface(&value, "update test set $set where id=1")
 	// 插入到args之前  dest 是struct或切片的指针
 	if !strings.Contains(cmd, "$set") {
 		return 0, errors.New("not found placeholders $set")
