@@ -218,7 +218,6 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-
 	return d.QueryRowContext(d.Ctx, cmd, args...)
 }
 
@@ -234,6 +233,7 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 	// 需要设置的值
 	value := reflect.ValueOf(dest)
 	typ := reflect.TypeOf(dest)
