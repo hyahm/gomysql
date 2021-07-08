@@ -218,6 +218,7 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
+	defer golog.Info(d.Ping())
 	golog.Info("test get one")
 	defer golog.Info("test get one complete")
 	return d.QueryRowContext(d.Ctx, cmd, args...)
@@ -230,7 +231,6 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-
 	rows, err := d.QueryContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return err
