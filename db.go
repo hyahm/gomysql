@@ -46,10 +46,6 @@ func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error
 
 func (d *Db) GetConnections() int {
 
-	ch <- struct{}{}
-	defer func() {
-		<-ch
-	}()
 	return d.Stats().OpenConnections
 }
 
@@ -125,10 +121,6 @@ func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	ch <- struct{}{}
-	defer func() {
-		<-ch
-	}()
 	// err := d.privateTooManyConn()
 	// if err != nil {
 	// 	return 0, err
@@ -154,14 +146,6 @@ func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	ch <- struct{}{}
-	defer func() {
-		<-ch
-	}()
-	// err := d.privateTooManyConn()
-	// if err != nil {
-	// 	return 0, err
-	// }
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)
@@ -223,10 +207,6 @@ func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	ch <- struct{}{}
-	defer func() {
-		<-ch
-	}()
 	// err := d.privateTooManyConn()
 	// if err != nil {
 	// 	return nil, err
@@ -238,10 +218,6 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	ch <- struct{}{}
-	defer func() {
-		<-ch
-	}()
 
 	return d.QueryRowContext(d.Ctx, cmd, args...)
 }
@@ -253,10 +229,6 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	ch <- struct{}{}
-	defer func() {
-		<-ch
-	}()
 
 	rows, err := d.QueryContext(d.Ctx, cmd, args...)
 	if err != nil {
