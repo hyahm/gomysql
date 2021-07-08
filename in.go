@@ -139,6 +139,8 @@ func (d *Db) GetOneIn(cmd string, args ...interface{}) *sql.Row {
 }
 
 func (d *Db) UpdateInterfaceIn(dest interface{}, cmd string, args ...interface{}) (int64, error) {
+	// $set 固定位置固定值
+	// db.UpdateInterfaceIn(&value, "update test set $set where id in (?)", [])
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
 		return 0, err
@@ -147,6 +149,8 @@ func (d *Db) UpdateInterfaceIn(dest interface{}, cmd string, args ...interface{}
 }
 
 func (d *Db) InsertInterfaceWithoutIDIn(dest interface{}, cmd string, args ...interface{}) error {
+	// $key 和 $value 固定位置固定值
+	// db.InsertInterfaceWithoutIDIn(&value, "insert into test($key)  values($value)  ", [])
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
 		return err
@@ -155,6 +159,8 @@ func (d *Db) InsertInterfaceWithoutIDIn(dest interface{}, cmd string, args ...in
 }
 
 func (d *Db) InsertInterfaceWithIDIn(dest interface{}, cmd string, args ...interface{}) ([]int64, error) {
+	// $key 和 $value 固定位置固定值
+	// db.InsertInterfaceWithIDIn(&value, "insert into test($key)  values($value) where a in (?)" [])
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
 		return nil, err
@@ -163,6 +169,9 @@ func (d *Db) InsertInterfaceWithIDIn(dest interface{}, cmd string, args ...inter
 }
 
 func (d *Db) SelectIn(dest interface{}, cmd string, args ...interface{}) error {
+	// db.SelectIn(&value, "select * from test  where a in (?)", [])
+	// 传入切片的地址， 根据tag 的 db 自动补充，
+	// 最求性能建议还是使用 GetRows or GetOne
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
 		return err

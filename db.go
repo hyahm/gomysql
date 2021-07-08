@@ -433,7 +433,7 @@ func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interfa
 // 插入字段的占位符 $key, $value
 func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...interface{}) error {
 	// $key 和 $value 固定位置固定值
-	// db.InsertInterfaceWithID(&value, "insert into test($key)  values($value)")
+	// db.InsertInterfaceWithoutID(&value, "insert into test($key)  values($value)")
 	if !strings.Contains(cmd, "$key") {
 		return errors.New("not found placeholders $key")
 	}
