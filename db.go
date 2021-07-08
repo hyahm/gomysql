@@ -218,6 +218,8 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
+	golog.Info("test get one")
+	defer golog.Info("test get one complete")
 	return d.QueryRowContext(d.Ctx, cmd, args...)
 }
 
