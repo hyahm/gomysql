@@ -1,10 +1,29 @@
 package gomysql
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/hyahm/golog"
 )
+
+func TestInt(t *testing.T) {
+	var i1 int = 0
+	var i2 int16 = 0
+	var i3 int8 = 0
+	var i4 int32 = 0
+	var i5 int64 = 0
+	var i6 float32 = 0
+	var i7 float64 = 0
+	t.Log(reflect.ValueOf(i1).Int() == 0)
+	t.Log(reflect.ValueOf(i2).Int() == 0)
+	t.Log(reflect.ValueOf(i3).Int() == 0)
+	t.Log(reflect.ValueOf(i4).Int() == 0)
+	t.Log(reflect.ValueOf(i5).Int() == 0)
+	t.Log(reflect.ValueOf(i6).Float() == 0)
+	t.Log(reflect.ValueOf(i7).Float() == 0)
+
+}
 
 func TestUpdate(t *testing.T) {
 	defer golog.Sync()
