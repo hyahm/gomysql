@@ -15,7 +15,6 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/hyahm/golog"
 )
 
 type Db struct {
@@ -218,9 +217,6 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 	if d.debug {
 		d.sql = cmdtostring(cmd, args...)
 	}
-	defer golog.Info(d.Ping())
-	golog.Info("test get one")
-	defer golog.Info("test get one complete")
 	return d.QueryRowContext(d.Ctx, cmd, args...)
 }
 
@@ -341,7 +337,7 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 						fmt.Println("not support , you can add issue: ", kind)
 					}
 				} else {
-					golog.Info("can not set: ", index)
+					fmt.Println("can not set: ", index)
 				}
 			}
 
