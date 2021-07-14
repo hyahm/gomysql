@@ -322,16 +322,14 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 						f64, _ := strconv.ParseFloat(string(b), 64)
 						new.Field(index).SetFloat(f64)
 
-					case reflect.Slice, reflect.Struct:
+					case reflect.Struct, reflect.Slice:
 						j := reflect.New(new.Field(index).Type())
 						json.Unmarshal(b, j.Interface())
-
 						new.Field(index).Set(j.Elem())
 
 					case reflect.Ptr:
 						j := reflect.New(new.Field(index).Type())
 						json.Unmarshal(b, j.Interface())
-
 						new.Field(index).Set(j)
 					default:
 						fmt.Println("not support , you can add issue: ", kind)
