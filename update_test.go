@@ -32,7 +32,7 @@ func TestUpdate(t *testing.T) {
 		Password:        "123456",
 		Port:            3306,
 		DbName:          "test",
-		Host:            "192.168.101.4",
+		Host:            "192.168.50.250",
 		MultiStatements: true,
 	}
 	db, err := conf.NewDb()
@@ -48,6 +48,7 @@ func TestUpdate(t *testing.T) {
 			Y: 20,
 			Z: 30,
 		},
+		Uids: []int64{1},
 	}
 
 	// $key  $value 是固定占位符
@@ -55,7 +56,7 @@ func TestUpdate(t *testing.T) {
 	// struct, 指针， 切片 默认值为 ""
 	// $set
 	golog.Info("start update")
-	_, err = db.UpdateInterface(ps, "update person set $set where id=?", 1)
+	_, err = db.UpdateInterface(ps, "update person set $set where id=?", 4)
 	if err != nil {
 		golog.Error(err)
 		t.Fatal(err)

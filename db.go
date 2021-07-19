@@ -483,16 +483,17 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 				if value.Field(i).IsNil() {
 					keys = append(keys, signs[0])
 					placeholders = append(placeholders, "?")
-					values = append(values, "")
+					values = append(values, "[]")
 				} else {
 					if value.Field(i).Len() == 0 && !strings.Contains(key, "omitempty") {
 						continue
 					}
+
 					keys = append(keys, signs[0])
 					placeholders = append(placeholders, "?")
 					send, err := json.Marshal(value.Field(i).Interface())
 					if err != nil {
-						values = append(values, "")
+						values = append(values, "[]")
 						continue
 					}
 					values = append(values, send)
@@ -504,13 +505,13 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 					}
 					keys = append(keys, signs[0])
 					placeholders = append(placeholders, "?")
-					values = append(values, "")
+					values = append(values, "{}")
 				} else {
 					keys = append(keys, signs[0])
 					placeholders = append(placeholders, "?")
 					send, err := json.Marshal(value.Field(i).Interface())
 					if err != nil {
-						values = append(values, "")
+						values = append(values, "{}")
 						continue
 					}
 					values = append(values, send)
@@ -520,7 +521,7 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 				placeholders = append(placeholders, "?")
 				send, err := json.Marshal(value.Field(i).Interface())
 				if err != nil {
-					values = append(values, "")
+					values = append(values, "{}")
 					continue
 				}
 				values = append(values, send)
