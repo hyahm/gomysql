@@ -401,6 +401,7 @@ func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interfa
 // 插入字段的占位符 $key, $value
 func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...interface{}) error {
 	// $key 和 $value 固定位置固定值
+	// ID 自增的必须设置 default
 	// db.InsertInterfaceWithoutID(&value, "insert into test($key)  values($value)")
 	if !strings.Contains(cmd, "$key") {
 		return errors.New("not found placeholders $key")
@@ -460,7 +461,7 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 			kind := value.Field(i).Kind()
 			switch kind {
 			case reflect.String:
-				if value.Field(i) == reflect.ValueOf("") && strings.Contains(key, "omitempty") {
+				if value.Field(i) == reflect.ValueOf("") && strings.Contains(key, "default") {
 					continue
 				}
 				keys = append(keys, signs[0])
@@ -468,7 +469,7 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 				values = append(values, value.Field(i).Interface())
 			case reflect.Int64,
 				reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32, reflect.Float32, reflect.Float64:
-				if value.Field(i) == reflect.ValueOf(0) && strings.Contains(key, "omitempty") {
+				if value.Field(i) == reflect.ValueOf(0) && strings.Contains(key, "default") {
 					continue
 				}
 
@@ -485,7 +486,7 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 					placeholders = append(placeholders, "?")
 					values = append(values, "[]")
 				} else {
-					if value.Field(i).Len() == 0 && !strings.Contains(key, "omitempty") {
+					if value.Field(i).Len() == 0 && !strings.Contains(key, "default") {
 						continue
 					}
 
@@ -500,7 +501,7 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 				}
 			case reflect.Ptr:
 				if value.Field(i).IsNil() {
-					if !strings.Contains(key, "omitempty") {
+					if !strings.Contains(key, "default") {
 						continue
 					}
 					keys = append(keys, signs[0])
