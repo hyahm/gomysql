@@ -289,9 +289,18 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 						f64, _ := strconv.ParseFloat(string(b), 64)
 						new.Field(index).SetFloat(f64)
 
-					case reflect.Struct, reflect.Slice:
+					case reflect.Struct:
 						j := reflect.New(new.Field(index).Type())
 						json.Unmarshal(b, j.Interface())
+						new.Field(index).Set(j.Elem())
+
+					case reflect.Slice:
+						j := reflect.New(new.Field(index).Type())
+						err = json.Unmarshal(b, j.Interface())
+						if err != nil {
+							new.Field(index).Set(reflect.MakeSlice(new.Field(index).Type(), 0, 0))
+							continue
+						}
 						new.Field(index).Set(j.Elem())
 
 					case reflect.Ptr:
