@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -308,7 +309,7 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 						json.Unmarshal(b, j.Interface())
 						new.Field(index).Set(j)
 					default:
-						fmt.Println("not support , you can add issue: ", kind)
+						log.Println("not support , you can make a issue to report in https://github.com/hyahm/gomysql, kind: ", kind)
 					}
 				} else {
 					fmt.Println("can not set: ", index)
