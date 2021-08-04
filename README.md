@@ -70,6 +70,7 @@ func Insert8(wg *sync.WaitGroup) {
 		var id int64
 	  	rows.Scan(&id)
 	}
+	rows.Close()
 	log.Println("mysql8:", time.Since(start).Seconds())
 	wg.Done()
 }
