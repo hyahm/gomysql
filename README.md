@@ -62,7 +62,7 @@ func Insert8(wg *sync.WaitGroup) {
 		<-ch
 	}
 	
-	rows,err := db.GetRowsIn("select id from test where age in (?)", gomysql.InArgs([]string{"1","2","3","4","5"}).ToInArgs())
+	rows,err := db.GetRowsIn("select id from test where age in (?)", []string{"1","2","3","4","5"})
 	if err != nil {
 		os.Exit(1)
 	}
