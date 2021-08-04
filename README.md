@@ -84,14 +84,14 @@ type MeStruct struct {
 }
 
 // 使用高级方法的第一个是对应数据库的字段
-// omitempty: 插入时候，如果没有传入值将使用数据库default的值， 如果没写就是默认值
+// default: 插入时候，如果没有传入值将使用数据库default的值， 如果没写就是默认值
 // force： 修改的时候， 如果设置了force， 那么强制修改字段的值， 如果没写， 零值的时候不会修改值
 // 主键必须设置 omitempty 并且不能有force
 type Person struct {
-	ID        int64    `db:"id,omitempty"`
+	ID        int64    `db:"id,default"`
 	FirstName string   `db:"first_name,force"`
 	LastName  string   `db:"last_name"`
-	Email     string   `db:"email,omitempty,force"`
+	Email     string   `db:"email,default,force"`
 	Me        MeStruct `db:"me"`
 	
 }
