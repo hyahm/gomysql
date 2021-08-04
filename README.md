@@ -127,7 +127,7 @@ func main() {
 		pss = append(pss, ps)
 	}
 	// $key  $value 是插入事的固定占位符， 在这个占位符之前不能有参数占位符？，如果有的话请使用 Insert处理
-	// omitempty: 如果为空， 那么为数据库的默认值
+	// default: 如果为空， 那么为数据库的默认值
 	// struct, 指针， 切片 默认值为 ""
 	// 传入的 dest 值 可以是指针，可以是数据，可以是结构体
 	err = db.InsertInterfaceWithoutID(pss, "insert into person($key) values($value)")
