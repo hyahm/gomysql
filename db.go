@@ -255,7 +255,7 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 		for index := 0; index < typ.NumField(); index++ {
 			dbname := typ.Field(index).Tag.Get("db")
 			tags := strings.Split(dbname, ",")
-			if len(tags) < 0 {
+			if len(tags) == 0 {
 				continue
 			}
 			if tags[0] == "" {
@@ -444,12 +444,25 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 				keys = append(keys, signs[0])
 				placeholders = append(placeholders, "?")
 				values = append(values, value.Field(i).Interface())
-			case reflect.Int64,
-				reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32, reflect.Float32, reflect.Float64:
-				if value.Field(i) == reflect.ValueOf(0) && strings.Contains(key, "default") {
+
+			case reflect.Int64, reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32:
+				if value.Field(i).Int() == 0 && !strings.Contains(key, "force") {
 					continue
 				}
-
+				keys = append(keys, signs[0])
+				placeholders = append(placeholders, "?")
+				values = append(values, value.Field(i).Interface())
+			case reflect.Float32, reflect.Float64:
+				if value.Field(i).Float() == 0 && !strings.Contains(key, "force") {
+					continue
+				}
+				keys = append(keys, signs[0])
+				placeholders = append(placeholders, "?")
+				values = append(values, value.Field(i).Interface())
+			case reflect.Uint64, reflect.Uint, reflect.Uint16, reflect.Uint8, reflect.Uint32:
+				if value.Field(i).Uint() == 0 && !strings.Contains(key, "force") {
+					continue
+				}
 				keys = append(keys, signs[0])
 				placeholders = append(placeholders, "?")
 				values = append(values, value.Field(i).Interface())
