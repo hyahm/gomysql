@@ -2,8 +2,6 @@ package gomysql
 
 import (
 	"testing"
-
-	"github.com/hyahm/golog"
 )
 
 type MeStruct struct {
@@ -24,7 +22,6 @@ type Person struct {
 
 func TestInsert(t *testing.T) {
 
-	defer golog.Sync()
 	conf := Sqlconfig{
 		UserName:        "test",
 		Password:        "123456",
@@ -58,7 +55,6 @@ func TestInsert(t *testing.T) {
 	// struct, 指针， 切片 默认值为 ""
 	err = db.InsertInterfaceWithoutID(ps, "insert into person($key) values($value)")
 	if err != nil {
-		golog.Error(err)
 		t.Fatal(err)
 	}
 }

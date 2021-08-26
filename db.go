@@ -22,8 +22,6 @@ type Db struct {
 	*sql.DB
 	conf      string
 	Ctx       context.Context
-	sql       string
-	debug     bool
 	sc        *Sqlconfig
 	f         *os.File
 	mu        *sync.RWMutex
@@ -34,10 +32,9 @@ type Db struct {
 func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error) {
 
 	if d.sc.WriteLogWhenFailed {
-		d.sql = cmdtostring(cmd, args...)
 		d.mu.Lock()
 		d.f.WriteString(fmt.Sprintf("-- %s, reason: %s\n", time.Now().Format("2006-01-02 15:04:05"), err.Error()))
-		d.f.WriteString(d.sql + "\n")
+		d.f.WriteString(ToSql(cmd, args...) + "\n")
 		d.f.Sync()
 		d.mu.Unlock()
 	}
@@ -101,14 +98,6 @@ func (d *Db) CreateDatabase(dbname string, overWrite bool) error {
 	return err
 }
 
-func (d *Db) OpenDebug() {
-	d.debug = true
-}
-
-func (d *Db) CloseDebug() {
-	d.debug = false
-}
-
 func (d *Db) Flush() {
 	if d.f != nil {
 		d.f.Sync()
@@ -118,9 +107,6 @@ func (d *Db) Flush() {
 
 func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
 
-	if d.debug {
-		d.sql = cmdtostring(cmd, args...)
-	}
 	// err := d.privateTooManyConn()
 	// if err != nil {
 	// 	return 0, err
@@ -135,26 +121,17 @@ func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
 }
 
 func (d *Db) Delete(cmd string, args ...interface{}) (int64, error) {
-	if d.debug {
-		d.sql = cmdtostring(cmd, args...)
-	}
 
 	return d.Update(cmd, args...)
 }
 
 func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
-	if d.debug {
-		d.sql = cmdtostring(cmd, args...)
-	}
+
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return d.execError(err, cmd, args...)
 	}
 	return result.LastInsertId()
-}
-
-func (d *Db) GetSql() string {
-	return d.sql
 }
 
 func (d *Db) InsertMany(cmd string, args ...interface{}) (int64, error) {
@@ -171,20 +148,12 @@ func (d *Db) InsertMany(cmd string, args ...interface{}) (int64, error) {
 }
 
 func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
-	if d.debug {
-		d.sql = cmdtostring(cmd, args...)
-	}
-	// err := d.privateTooManyConn()
-	// if err != nil {
-	// 	return nil, err
-	// }
+
 	return d.QueryContext(d.Ctx, cmd, args...)
 }
 
 func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
-	if d.debug {
-		d.sql = cmdtostring(cmd, args...)
-	}
+
 	return d.QueryRowContext(d.Ctx, cmd, args...)
 }
 
@@ -192,9 +161,7 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 	// db.Select(&value, "select * from test")
 	// 传入切片的地址， 根据tag 的 db 自动补充，
 	// 最求性能建议还是使用 GetRows or GetOne
-	if d.debug {
-		d.sql = cmdtostring(cmd, args...)
-	}
+
 	rows, err := d.QueryContext(d.Ctx, cmd, args...)
 	if err != nil {
 		return err
@@ -529,7 +496,25 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 }
 
 // 还原sql
-func cmdtostring(cmd string, args ...interface{}) string {
+func ToSql(cmd string, args ...interface{}) string {
+	cmd = strings.Replace(cmd, "?", "%v", -1)
+	if len(args) > 0 {
+		newargs := make([]interface{}, 0, len(args))
+		for _, v := range args {
+			v = fmt.Sprintf("'%v'", v)
+			newargs = append(newargs, v)
+		}
+		return fmt.Sprintf(cmd, newargs...)
+	}
+	return cmd
+}
+
+// 还原sql
+func InToSql(cmd string, args ...interface{}) string {
+	cmd, args, err := makeArgs(cmd, args...)
+	if err != nil {
+		return ""
+	}
 	cmd = strings.Replace(cmd, "?", "%v", -1)
 	if len(args) > 0 {
 		newargs := make([]interface{}, 0, len(args))

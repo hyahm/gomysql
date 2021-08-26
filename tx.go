@@ -15,8 +15,6 @@ type Tx struct {
 	tx      *sql.Tx
 	conf    string
 	Ctx     context.Context
-	sql     string
-	debug   bool
 	sc      *Sqlconfig
 	maxConn int
 	db      *Db
@@ -31,34 +29,16 @@ func (d *Db) NewTx() (*Tx, error) {
 		tx,
 		d.conf,
 		d.Ctx,
-		d.sql,
-		d.debug,
 		d.sc,
 		d.maxConn,
 		d,
 	}, nil
 }
 
-func (t *Tx) OpenDebug() {
-	t.debug = true
-}
-
-func (t *Tx) CloseDebug() {
-	t.debug = false
-}
-
 func (t *Tx) Update(cmd string, args ...interface{}) (int64, error) {
 	if t.tx == nil {
 		return 0, errors.New("some thing wrong , may be you need close or rallback")
 	}
-	if t.debug {
-		t.sql = cmdtostring(cmd, args...)
-	}
-	// err := t.privateTooManyConn()
-	// if err != nil {
-	// 	t.tx = nil
-	// 	return 0, err
-	// }
 
 	result, err := t.tx.ExecContext(t.Ctx, cmd, args...)
 	if err != nil {
@@ -69,32 +49,16 @@ func (t *Tx) Update(cmd string, args ...interface{}) (int64, error) {
 }
 
 func (t *Tx) Delete(cmd string, args ...interface{}) (int64, error) {
-	if t.debug {
-		t.sql = cmdtostring(cmd, args...)
-	}
-
 	return t.Update(cmd, args...)
 }
 
 func (t *Tx) Insert(cmd string, args ...interface{}) (int64, error) {
-	if t.debug {
-		t.sql = cmdtostring(cmd, args...)
-	}
-	// err := t.privateTooManyConn()
-	// if err != nil {
-	// 	return 0, err
-	// }
-
 	result, err := t.tx.ExecContext(t.Ctx, cmd, args...)
 	if err != nil {
 		return 0, err
 	}
 
 	return result.LastInsertId()
-}
-
-func (t *Tx) GetSql() string {
-	return t.sql
 }
 
 func (t *Tx) InsertMany(cmd string, args ...interface{}) (int64, error) {
@@ -112,14 +76,6 @@ func (t *Tx) InsertMany(cmd string, args ...interface{}) (int64, error) {
 }
 
 func (t *Tx) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
-	if t.debug {
-		t.sql = cmdtostring(cmd, args...)
-	}
-	// err := t.privateTooManyConn()
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	return t.tx.QueryContext(t.Ctx, cmd, args...)
 }
 
@@ -140,14 +96,6 @@ func (t *Tx) Close() error {
 }
 
 func (t *Tx) GetOne(cmd string, args ...interface{}) *sql.Row {
-	if t.debug {
-		t.sql = cmdtostring(cmd, args...)
-	}
-	// err := t.privateTooManyConn()
-	// if err != nil {
-	// 	return &Row{err: err}
-	// }
-
 	return t.tx.QueryRowContext(t.Ctx, cmd, args...)
 }
 
@@ -236,9 +184,6 @@ func (t *Tx) Select(dest interface{}, cmd string, args ...interface{}) error {
 	// db.Select(&value, "select * from test")
 	// 传入切片的地址， 根据tag 的 db 自动补充，
 	// 最求性能建议还是使用 GetRows or GetOne
-	if t.debug {
-		t.sql = cmdtostring(cmd, args...)
-	}
 	rows, err := t.tx.QueryContext(t.Ctx, cmd, args...)
 	if err != nil {
 		return err

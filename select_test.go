@@ -3,8 +3,6 @@ package gomysql
 import (
 	"encoding/json"
 	"testing"
-
-	"github.com/hyahm/golog"
 )
 
 type Paipan struct {
@@ -37,7 +35,6 @@ CREATE TABLE place (
 )`
 
 func TestSelect(t *testing.T) {
-	defer golog.Sync()
 	conf := Sqlconfig{
 		UserName:        "test",
 		Password:        "123456",
@@ -56,15 +53,14 @@ func TestSelect(t *testing.T) {
 	persons := &Person{}
 	err = db.Select(&persons, "select * from person limit 1")
 	if err != nil {
-		golog.Error(err)
+		t.Fatal(err)
 	}
-	golog.Info(persons)
+	t.Log(persons)
 	// 建表
 
 }
 
 func TestSelect1(t *testing.T) {
-	defer golog.Sync()
 	conf := Sqlconfig{
 		UserName:        "test",
 		Password:        "123456",
@@ -83,15 +79,14 @@ func TestSelect1(t *testing.T) {
 	persons := make([]Person, 0)
 	err = db.Select(&persons, "select * from person limit 1")
 	if err != nil {
-		golog.Error(err)
+		t.Fatal(err)
 	}
-	golog.Info(persons)
+	t.Log(persons)
 	// 建表
 
 }
 
 func TestSelect2(t *testing.T) {
-	defer golog.Sync()
 	conf := Sqlconfig{
 		UserName:        "test",
 		Password:        "123456",
@@ -110,15 +105,14 @@ func TestSelect2(t *testing.T) {
 	persons := make([]*Person, 0)
 	err = db.Select(&persons, "select * from person limit 1")
 	if err != nil {
-		golog.Error(err)
+		t.Fatal(err)
 	}
-	golog.Info(*persons[0])
+	t.Log(*persons[0])
 	// 建表
 
 }
 
 func TestSelect3(t *testing.T) {
-	defer golog.Sync()
 	conf := Sqlconfig{
 		UserName:        "test",
 		Password:        "123456",
@@ -137,9 +131,9 @@ func TestSelect3(t *testing.T) {
 	persons := Person{}
 	err = db.Select(&persons, "select * from person limit 1")
 	if err != nil {
-		golog.Error(err)
+		t.Fatal(err)
 	}
-	golog.Info(persons)
+	t.Log(persons)
 	// 建表
 
 }

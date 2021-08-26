@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/hyahm/golog"
 	"github.com/hyahm/gomysql"
 )
 
@@ -47,7 +46,6 @@ var (
 )
 
 func main() {
-	defer golog.Sync()
 	db, err := conf.NewDb()
 	if err != nil {
 		log.Fatal(err)

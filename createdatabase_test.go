@@ -2,12 +2,9 @@ package gomysql
 
 import (
 	"testing"
-
-	"github.com/hyahm/golog"
 )
 
 func TestCreate(t *testing.T) {
-	defer golog.Sync()
 	// schema := `
 	// CREATE TABLE person (
 	// 	first_name varchar(30) not null default '',

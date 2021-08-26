@@ -3,8 +3,6 @@ package gomysql
 import (
 	"reflect"
 	"testing"
-
-	"github.com/hyahm/golog"
 )
 
 func TestInt(t *testing.T) {
@@ -26,7 +24,6 @@ func TestInt(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	defer golog.Sync()
 	conf := Sqlconfig{
 		UserName:        "test",
 		Password:        "123456",
@@ -55,10 +52,9 @@ func TestUpdate(t *testing.T) {
 	// omitempty: 如果为空， 那么为数据库的默认值
 	// struct, 指针， 切片 默认值为 ""
 	// $set
-	golog.Info("start update")
+	t.Log("start update")
 	_, err = db.UpdateInterface(ps, "update person set $set where id=?", 4)
 	if err != nil {
-		golog.Error(err)
 		t.Fatal(err)
 	}
 }

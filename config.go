@@ -85,8 +85,6 @@ func (s *Sqlconfig) conndb(conf string) (*Db, error) {
 		conn,
 		conf,
 		context.Background(),
-		"",
-		false,
 		s,
 		nil,
 		nil,

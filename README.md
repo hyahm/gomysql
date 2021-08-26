@@ -133,7 +133,6 @@ func main() {
 	// 传入的 dest 值 可以是指针，可以是数据，可以是结构体
 	err = db.InsertInterfaceWithoutID(pss, "insert into person($key) values($value)")
 	if err != nil {
-		golog.Error(err)
 		t.Fatal(err)
 	}
 	// 将会生成20条数据
@@ -155,7 +154,6 @@ func main() {
 	// 传入的值必须是指针或结构体
 	_, err = db.UpdateInterface(updateps, "update person set $set where id=?", 1)
 	if err != nil {
-		golog.Error(err)
 		t.Fatal(err)
 	}
 	// 执行后会修改id为1的行
@@ -163,11 +161,11 @@ func main() {
 
 	err = db.Select(&persons, "select * from Person")
 	if err != nil {
-		golog.Error(err)
+		fmt.Println(err)
 	}
-	golog.Info(len(persons))
+
 	for _, v := range persons {
-		golog.Infof("%#v", *v)
+		fmt.Printf("%#v", *v)
 	}
 }
 ```
