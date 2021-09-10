@@ -14,6 +14,10 @@ type testData struct {
 	expectArgs []interface{}
 }
 
+func TestIn(t *testing.T) {
+	t.Log(InToSql("select * from a where a not in (?)", []int{}))
+}
+
 func TestString(t *testing.T) {
 	a := "select * from xxx where id=? and a in (?) and b in (?) and name=?"
 	args := []interface{}{

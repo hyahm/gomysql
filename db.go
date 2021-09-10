@@ -56,7 +56,7 @@ func (d *Db) Use(dbname string, overWrite ...bool) (*Db, error) {
 	if err != nil {
 		return d, err
 	}
-
+	d.Close()
 	s := &Sqlconfig{
 		UserName:                d.sc.UserName,
 		Password:                d.sc.Password,

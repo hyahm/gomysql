@@ -129,13 +129,27 @@ func makeArgs(cmd string, args ...interface{}) (string, []interface{}, error) {
 				// 还要删除前面的in
 				endin := strings.LastIndex(cmdsplit[i], "in")
 				cmdsplit[i] = cmdsplit[i][:endin]
-
+				fmt.Println(cmdsplit[i][:endin])
 				cmdsplit[i] = strings.Trim(cmdsplit[i], " ")
 				// 删除前面的word
+				fmt.Println(cmdsplit[i])
+				// 判断这个是不是not
 				endspace := strings.LastIndex(cmdsplit[i], " ")
-				cmdsplit[i] = cmdsplit[i][:endspace]
+				if cmdsplit[i][endspace+1:] == "not" {
+					cmdsplit[i] = cmdsplit[i][:endspace]
+					cmdsplit[i] = strings.Trim(cmdsplit[i], " ")
+					// 删除前面的word
+					fmt.Println(cmdsplit[i])
+					// 判断这个是不是not
+					endspace = strings.LastIndex(cmdsplit[i], " ")
+					cmdsplit[i] = cmdsplit[i][:endspace]
+					cmdsplit[i] += " 1=1 "
+				} else {
+					cmdsplit[i] = cmdsplit[i][:endspace]
+					cmdsplit[i] += " 1=0 "
+				}
+
 				// 删完后加上 1=0
-				cmdsplit[i] += " 1=0 "
 
 				// 最后参数位置也要删掉
 				// 判断是不是最后一个

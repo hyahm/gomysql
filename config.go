@@ -61,10 +61,7 @@ func (s *Sqlconfig) CreateDB(name string) (*Db, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = db.Close()
-	if err != nil {
-		return nil, err
-	}
+	db.Close()
 
 	return newdb, err
 }

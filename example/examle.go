@@ -46,11 +46,13 @@ var (
 )
 
 func main() {
+
 	db, err := conf.NewDb()
 	if err != nil {
 		log.Fatal(err)
 	}
 	time.Sleep(time.Second * 3)
+
 	cate := &Category{}
 	err = db.Select(&cate, fmt.Sprintf("select * from category where id=%d", 51))
 	if err != nil {
