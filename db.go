@@ -262,7 +262,7 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 						json.Unmarshal(b, j.Interface())
 						new.Field(index).Set(j.Elem())
 
-					case reflect.Slice:
+					case reflect.Slice, reflect.Interface:
 						j := reflect.New(new.Field(index).Type())
 						err = json.Unmarshal(b, j.Interface())
 						if err != nil {
@@ -474,7 +474,7 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 					}
 					values = append(values, send)
 				}
-			case reflect.Struct:
+			case reflect.Struct, reflect.Interface:
 				keys = append(keys, signs[0])
 				placeholders = append(placeholders, "?")
 				send, err := json.Marshal(value.Field(i).Interface())
@@ -620,7 +620,7 @@ func (d *Db) UpdateInterface(dest interface{}, cmd string, args ...interface{}) 
 				}
 				values = append(values, send)
 			}
-		case reflect.Struct:
+		case reflect.Struct, reflect.Interface:
 			keys = append(keys, signs[0]+"=?")
 			send, err := json.Marshal(value.Field(i).Interface())
 			if err != nil {
