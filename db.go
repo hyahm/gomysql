@@ -34,7 +34,7 @@ func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error
 	if d.sc.WriteLogWhenFailed {
 		d.mu.Lock()
 		d.f.WriteString(fmt.Sprintf("-- %s, reason: %s\n", time.Now().Format("2006-01-02 15:04:05"), err.Error()))
-		d.f.WriteString(ToSql(cmd, args...) + "\n")
+		d.f.WriteString(ToSql(cmd, args...) + ";\n")
 		d.f.Sync()
 		d.mu.Unlock()
 	}

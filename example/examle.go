@@ -69,5 +69,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	db.Update("1")
 	fmt.Println(post.ThumbSeries)
 }
