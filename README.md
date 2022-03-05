@@ -40,7 +40,8 @@ func Insert8(wg *sync.WaitGroup) {
 		WriteTimeout:       100 * time.Second,
 		WriteLogWhenFailed: true,
 		ConnMaxLifetime:    30 * time.Second,
-		LogFile:            ".failedlinux.sql",
+		// 删改查失败写入的文件
+		LogFile:            ".failedlinux.sql", 
 	}
 	ch := make(chan int, Num)
 	db, err := conf.NewDb()
