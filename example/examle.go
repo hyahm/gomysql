@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 
-	"github.com/hyahm/golog"
 	"github.com/hyahm/gomysql"
 )
 
@@ -18,10 +17,10 @@ type Postparam struct {
 
 var (
 	conf = &gomysql.Sqlconfig{
-		Host:         "192.168.50.250",
+		Host:         "146.56.246.145",
 		Port:         3306,
-		UserName:     "test",
-		Password:     "123456",
+		UserName:     "spider",
+		Password:     "Wqox1Bp5rFZl688KSgPH1vHnqt8s",
 		DbName:       "test",
 		MaxOpenConns: 10,
 		MaxIdleConns: 10,
@@ -46,7 +45,6 @@ type Person struct {
 }
 
 func main() {
-	defer golog.Sync()
 	db, err := conf.NewDb()
 	if err != nil {
 		log.Fatal(err)
@@ -61,18 +59,17 @@ func main() {
 		// 	Y: 20,
 		// 	Z: 30,
 		// },
-		Uids: []int64{1},
-		Age:  1,
+		// Uids: []int64{1},
+		Age: 1,
 	}
-
+	// db.InsertInterfaceWithID(ps, "insert into person($key) values($value)")
 	// $key  $value 是固定占位符
 	// omitempty: 如果为空， 那么为数据库的默认值
 	// struct, 指针， 切片 默认值为 ""
 	// $set
-	res := db.UpdateInterface(ps, "update person set $set where id=?", 4)
-	golog.Info(res.Sql)
+	res := db.UpdateInterface(ps, "update person set $set where id=?", 1)
 	if res.Err != nil {
-		golog.Fatal(res.Err)
+		log.Fatal(res.Err)
 	}
 
 	// cate := &User{}

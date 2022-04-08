@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/hyahm/golog"
 )
 
 type Db struct {
@@ -126,7 +125,6 @@ func (d *Db) Insert(cmd string, args ...interface{}) Result {
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		res.Err = err
-		golog.Info(err)
 		d.execError(err, res.Sql)
 		return res
 	}
