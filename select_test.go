@@ -2,7 +2,11 @@ package gomysql
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
+	"os"
 	"testing"
+	"time"
 )
 
 type Paipan struct {
@@ -84,6 +88,55 @@ func TestSelect1(t *testing.T) {
 	t.Log(persons)
 	// 建表
 
+}
+
+const Num = 1000
+
+func TestMysql8(t *testing.T) {
+	start := time.Now()
+	conf := &Sqlconfig{
+		Host:               "127.0.0.1",
+		UserName:           "cander",
+		Password:           "123456",
+		DbName:             "test",
+		Port:               3306,
+		MaxOpenConns:       100,
+		MaxIdleConns:       10,
+		ReadTimeout:        100 * time.Second,
+		WriteTimeout:       100 * time.Second,
+		WriteLogWhenFailed: true,
+		ConnMaxLifetime:    30 * time.Second,
+		// 删改查失败写入的文件
+		LogFile: ".failedlinux.sql",
+	}
+	ch := make(chan int, Num)
+	db, err := conf.NewDb()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	for i := 0; i < Num; i++ {
+		go func(i int) {
+			db.Insert("insert into test(name, age) values(?,?)", fmt.Sprintf("test%d", i), i)
+			ch <- 1
+		}(i)
+
+	}
+
+	for i := 0; i < Num; i++ {
+		<-ch
+	}
+
+	rows, err := db.GetRowsIn("select id from test where age in (?)", []string{"1", "2", "3", "4", "5"})
+	if err != nil {
+		os.Exit(1)
+	}
+	for rows.Next() {
+		var id int64
+		rows.Scan(&id)
+	}
+	rows.Close()
+	log.Println("mysql8:", time.Since(start).Seconds())
 }
 
 func TestSelect2(t *testing.T) {

@@ -132,8 +132,8 @@ func main() {
 	// default: 如果为空， 那么为数据库的默认值
 	// struct, 指针， 切片 默认值为 ""
 	// 传入的 dest 值 可以是指针，可以是数据，可以是结构体
-	err = db.InsertInterfaceWithoutID(pss, "insert into person($key) values($value)")
-	if err != nil {
+	result = db.InsertInterfaceWithoutID(pss, "insert into person($key) values($value)")
+	if result.Err != nil {
 		t.Fatal(err)
 	}
 	// 将会生成20条数据
@@ -153,15 +153,15 @@ func main() {
 	// $set 是固定占位符, 前面也必须没有参数占位符 ?
 	// omitempty: 如果为空， 那么为数据库的默认值
 	// 传入的值必须是指针或结构体
-	_, err = db.UpdateInterface(updateps, "update person set $set where id=?", 1)
-	if err != nil {
+	result = db.UpdateInterface(updateps, "update person set $set where id=?", 1)
+	if result.Err != nil {
 		t.Fatal(err)
 	}
 	// 执行后会修改id为1的行
 	persons := make([]*Category, 0)
 
-	err = db.Select(&persons, "select * from Person")
-	if err != nil {
+	result = db.Select(&persons, "select * from Person")
+	if result.Err != nil {
 		fmt.Println(err)
 	}
 
