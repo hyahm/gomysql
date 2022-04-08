@@ -35,6 +35,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	db.NewCurder(User{})
 	// cate := &User{}
 	res := db.Insert("INSERT INTO user (username, password) VALUES ('77tom', '123') ON DUPLICATE KEY UPDATE username='tom', password='123';")
 	// _, err = db.ReplaceInterface(&cate, "INSERT INTO user ($key) VALUES ($value) ON DUPLICATE KEY UPDATE $set")
