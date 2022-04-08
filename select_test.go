@@ -51,8 +51,8 @@ func TestSelect(t *testing.T) {
 	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "Jason", "Moiron", "jmoiron@jmoiron.net")
 	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "John", "Doe", "johndoeDNE@gmail.net")
 	persons := &Person{}
-	err = db.Select(&persons, "select * from person limit 1")
-	if err != nil {
+	res := db.Select(&persons, "select * from person limit 1")
+	if res.Err != nil {
 		t.Fatal(err)
 	}
 	t.Log(persons)
@@ -77,8 +77,8 @@ func TestSelect1(t *testing.T) {
 	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "Jason", "Moiron", "jmoiron@jmoiron.net")
 	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "John", "Doe", "johndoeDNE@gmail.net")
 	persons := make([]Person, 0)
-	err = db.Select(&persons, "select * from person limit 1")
-	if err != nil {
+	res := db.Select(&persons, "select * from person limit 1")
+	if res.Err != nil {
 		t.Fatal(err)
 	}
 	t.Log(persons)
@@ -103,8 +103,8 @@ func TestSelect2(t *testing.T) {
 	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "Jason", "Moiron", "jmoiron@jmoiron.net")
 	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "John", "Doe", "johndoeDNE@gmail.net")
 	persons := make([]*Person, 0)
-	err = db.Select(&persons, "select * from person limit 1")
-	if err != nil {
+	res := db.Select(&persons, "select * from person limit 1")
+	if res.Err != nil {
 		t.Fatal(err)
 	}
 	t.Log(*persons[0])
@@ -129,8 +129,8 @@ func TestSelect3(t *testing.T) {
 	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "Jason", "Moiron", "jmoiron@jmoiron.net")
 	// db.Insert("INSERT INTO person (first_name, last_name, email) VALUES (?, ?, ?)", "John", "Doe", "johndoeDNE@gmail.net")
 	persons := Person{}
-	err = db.Select(&persons, "select * from person limit 1")
-	if err != nil {
+	res := db.Select(&persons, "select * from person limit 1")
+	if res.Err != nil {
 		t.Fatal(err)
 	}
 	t.Log(persons)

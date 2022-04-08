@@ -53,8 +53,8 @@ func TestInsert(t *testing.T) {
 	// $key  $value 是固定占位符
 	// default: 如果设置了并且为零值， 那么为数据库的默认值
 	// struct, 指针， 切片 默认值为 ""
-	err = db.InsertInterfaceWithoutID(ps, "insert into person($key) values($value)")
-	if err != nil {
+	res := db.InsertInterfaceWithoutID(ps, "insert into person($key) values($value)")
+	if res.Err != nil {
 		t.Fatal(err)
 	}
 }

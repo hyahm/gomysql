@@ -103,7 +103,7 @@ func (s *Sqlconfig) conndb(conf string) (*Db, error) {
 		db.maxpacket = 4 * 1024 * 1024 // 默认4m
 	}
 	// 防止开始就有很多连接，导致
-	ch = make(chan struct{}, db.maxConn)
+	// ch = make(chan struct{}, db.maxConn)
 
 	db.SetMaxOpenConns(s.MaxOpenConns)
 	db.SetConnMaxLifetime(s.ConnMaxLifetime)

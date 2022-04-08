@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 )
@@ -17,28 +18,28 @@ var IgnoreWords = []string{"or", "and"}
 // 如果后面有or 或者 and，只用删除or 或者and 那么删除前面的where， on 关键字
 var IgnoreCondition = []string{"where", "on"}
 
-func (d *Db) UpdateIn(cmd string, args ...interface{}) (int64, error) {
+func (d *Db) UpdateIn(cmd string, args ...interface{}) Result {
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
-		return 0, err
+		return Result{Err: err}
 	}
-	return d.Update(newcmd, newargs...)
+	return d.Update(newcmd, newargs)
 }
 
-func (d *Db) InsertIn(cmd string, args ...interface{}) (int64, error) {
+func (d *Db) InsertIn(cmd string, args ...interface{}) Result {
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
-		return 0, err
+		return Result{Err: err}
 	}
-	return d.Insert(newcmd, newargs...)
+	return d.Insert(newcmd, newargs)
 }
 
-func (d *Db) DeleteIn(cmd string, args ...interface{}) (int64, error) {
+func (d *Db) DeleteIn(cmd string, args ...interface{}) Result {
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
-		return 0, err
+		return Result{Err: err}
 	}
-	return d.Delete(newcmd, newargs...)
+	return d.Delete(newcmd, newargs)
 }
 
 func (d *Db) GetRowsIn(cmd string, args ...interface{}) (*sql.Rows, error) {
@@ -52,48 +53,49 @@ func (d *Db) GetRowsIn(cmd string, args ...interface{}) (*sql.Rows, error) {
 func (d *Db) GetOneIn(cmd string, args ...interface{}) *sql.Row {
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
-		panic(err)
+		log.Println(err)
+		return nil
 	}
 	return d.GetOne(newcmd, newargs...)
 }
 
-func (d *Db) UpdateInterfaceIn(dest interface{}, cmd string, args ...interface{}) (int64, error) {
+func (d *Db) UpdateInterfaceIn(dest interface{}, cmd string, args ...interface{}) Result {
 	// $set 固定位置固定值
 	// db.UpdateInterfaceIn(&value, "update test set $set where id in (?)", [])
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
-		return 0, err
+		return Result{Err: err}
 	}
 	return d.UpdateInterface(dest, newcmd, newargs...)
 }
 
-func (d *Db) InsertInterfaceWithoutIDIn(dest interface{}, cmd string, args ...interface{}) error {
+func (d *Db) InsertInterfaceWithoutIDIn(dest interface{}, cmd string, args ...interface{}) Result {
 	// $key 和 $value 固定位置固定值
 	// db.InsertInterfaceWithoutIDIn(&value, "insert into test($key)  values($value)  ", [])
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
-		return err
+		return Result{Err: err}
 	}
 	return d.InsertInterfaceWithoutID(dest, newcmd, newargs...)
 }
 
-func (d *Db) InsertInterfaceWithIDIn(dest interface{}, cmd string, args ...interface{}) ([]int64, error) {
+func (d *Db) InsertInterfaceWithIDIn(dest interface{}, cmd string, args ...interface{}) Result {
 	// $key 和 $value 固定位置固定值
 	// db.InsertInterfaceWithIDIn(&value, "insert into test($key)  values($value) where a in (?)" [])
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
-		return nil, err
+		return Result{Err: err}
 	}
 	return d.InsertInterfaceWithID(dest, newcmd, newargs...)
 }
 
-func (d *Db) SelectIn(dest interface{}, cmd string, args ...interface{}) error {
+func (d *Db) SelectIn(dest interface{}, cmd string, args ...interface{}) Result {
 	// db.SelectIn(&value, "select * from test  where a in (?)", [])
 	// 传入切片的地址， 根据tag 的 db 自动补充，
 	// 最求性能建议还是使用 GetRows or GetOne
 	newcmd, newargs, err := makeArgs(cmd, args...)
 	if err != nil {
-		return err
+		return Result{Err: err}
 	}
 	return d.Select(dest, newcmd, newargs...)
 }

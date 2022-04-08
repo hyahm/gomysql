@@ -29,7 +29,7 @@ type Db struct {
 	maxConn   int
 }
 
-func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error) {
+func (d *Db) execError(err error, cmd string, args ...interface{}) {
 
 	if d.sc.WriteLogWhenFailed {
 		d.mu.Lock()
@@ -38,7 +38,6 @@ func (d *Db) execError(err error, cmd string, args ...interface{}) (int64, error
 		d.f.Sync()
 		d.mu.Unlock()
 	}
-	return 0, err
 }
 
 func (d *Db) GetConnections() int {
@@ -105,36 +104,44 @@ func (d *Db) Flush() {
 	}
 }
 
-func (d *Db) Update(cmd string, args ...interface{}) (int64, error) {
+func (d *Db) Update(cmd string, args ...interface{}) Result {
 
 	// err := d.privateTooManyConn()
 	// if err != nil {
 	// 	return 0, err
 	// }
-
+	res := Result{
+		Sql: ToSql(cmd, args...),
+	}
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
-		return d.execError(err, cmd, args...)
+		res.Err = err
+		d.execError(err, res.Sql)
+		return res
 	}
-
-	return result.RowsAffected()
+	res.RowsAffected, res.Err = result.RowsAffected()
+	return res
 }
 
-func (d *Db) Delete(cmd string, args ...interface{}) (int64, error) {
-
+func (d *Db) Delete(cmd string, args ...interface{}) Result {
 	return d.Update(cmd, args...)
 }
 
-func (d *Db) Insert(cmd string, args ...interface{}) (int64, error) {
-
+func (d *Db) Insert(cmd string, args ...interface{}) Result {
+	res := Result{
+		Sql: ToSql(cmd, args...),
+	}
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
-		return d.execError(err, cmd, args...)
+		res.Err = err
+		d.execError(err, res.Sql)
+		return res
 	}
-	return result.LastInsertId()
+	res.LastInsertId, res.Err = result.LastInsertId()
+	return res
 }
 
-func (d *Db) InsertMany(cmd string, args ...interface{}) (int64, error) {
+func (d *Db) InsertMany(cmd string, args ...interface{}) Result {
 	// sql: insert into test(id, name) values(?,?)  args: interface{}...  1,'t1', 2, 't2', 3, 't3'
 	// 每次返回的是第一次插入的id
 	if args == nil {
@@ -142,7 +149,7 @@ func (d *Db) InsertMany(cmd string, args ...interface{}) (int64, error) {
 	}
 	newcmd, err := formatSql(cmd, args...)
 	if err != nil {
-		return 0, err
+		return Result{Err: err}
 	}
 	return d.Insert(newcmd, args...)
 }
@@ -157,14 +164,15 @@ func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
 	return d.QueryRowContext(d.Ctx, cmd, args...)
 }
 
-func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
+func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) Result {
 	// db.Select(&value, "select * from test")
 	// 传入切片的地址， 根据tag 的 db 自动补充，
 	// 最求性能建议还是使用 GetRows or GetOne
-
-	rows, err := d.QueryContext(d.Ctx, cmd, args...)
+	res := Result{Sql: ToSql(cmd, args...)}
+	rows, err := d.QueryContext(d.Ctx, res.Sql)
 	if err != nil {
-		return err
+		res.Err = err
+		return res
 	}
 	defer rows.Close()
 	// 需要设置的值
@@ -173,7 +181,8 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 	// cols := 0
 	// // json.Unmarshal returns errors for these
 	if typ.Kind() != reflect.Ptr {
-		return errors.New("must pass a pointer, not a value, to StructScan destination")
+		res.Err = errors.New("must pass a pointer, not a value, to StructScan destination")
+		return res
 	}
 	// stt 是数组基础数据结构
 
@@ -291,7 +300,7 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 				value.Elem().Set(new)
 			}
 
-			return nil
+			return res
 		} else {
 			if isPtr {
 				ss = reflect.Append(ss, new.Addr())
@@ -302,18 +311,24 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) error {
 		}
 	}
 	value.Elem().Set(ss)
-	return nil
+	return res
 }
 
-func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interface{}) ([]int64, error) {
+func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interface{}) Result {
 	// $key 和 $value 固定位置固定值
 	// db.InsertInterfaceWithID(&value, "insert into test($key)  values($value)")
+	res := Result{
+		Sql:           ToSql(cmd, args...),
+		LastInsertIds: make([]int64, 0),
+	}
 	if !strings.Contains(cmd, "$key") {
-		return nil, errors.New("not found placeholders $key")
+		res.Err = errors.New("not found placeholders $key")
+		return res
 	}
 
 	if !strings.Contains(cmd, "$value") {
-		return nil, errors.New("not found placeholders $value")
+		res.Err = errors.New("not found placeholders $value")
+		return res
 	}
 	typ := reflect.TypeOf(dest)
 	value := reflect.ValueOf(dest)
@@ -323,36 +338,38 @@ func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interfa
 	}
 
 	if typ.Kind() == reflect.Struct {
-		id, err := d.insertInterface(dest, cmd, args...)
-		return []int64{id}, err
+		return d.insertInterface(dest, cmd, args...)
 	}
-	ids := make([]int64, 0)
 	if typ.Kind() == reflect.Slice {
 		// 如果是切片， 那么每个值都做一次处理
 		length := value.Len()
 
 		for i := 0; i < length; i++ {
-			id, err := d.insertInterface(value.Index(i).Interface(), cmd, args...)
-			if err != nil {
-				return ids, err
+			result := d.insertInterface(value.Index(i).Interface(), cmd, args...)
+			if result.Err != nil {
+				return result
 			}
-			ids = append(ids, id)
+			res.LastInsertIds = append(res.LastInsertIds, result.LastInsertId)
 		}
 	}
-	return ids, nil
+	return res
 }
 
 // 插入字段的占位符 $key, $value
-func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...interface{}) error {
+func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...interface{}) Result {
 	// $key 和 $value 固定位置固定值
 	// ID 自增的必须设置 default
 	// db.InsertInterfaceWithoutID(&value, "insert into test($key)  values($value)")
+	res := Result{
+		Sql: ToSql(cmd, args...),
+	}
 	if !strings.Contains(cmd, "$key") {
-		return errors.New("not found placeholders $key")
+		return Result{Err: errors.New("not found placeholders $key")}
 	}
 
 	if !strings.Contains(cmd, "$value") {
-		return errors.New("not found placeholders $value")
+
+		return Result{Err: errors.New("not found placeholders $value")}
 	}
 	typ := reflect.TypeOf(dest)
 	value := reflect.ValueOf(dest)
@@ -361,8 +378,7 @@ func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...inte
 		value = value.Elem()
 	}
 	if typ.Kind() == reflect.Struct {
-		_, err := d.insertInterface(dest, cmd, args...)
-		return err
+		return d.insertInterface(dest, cmd, args...)
 	}
 
 	if typ.Kind() == reflect.Slice {
@@ -370,16 +386,16 @@ func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...inte
 		length := value.Len()
 
 		for i := 0; i < length; i++ {
-			_, err := d.insertInterface(value.Index(i).Interface(), cmd, args...)
-			if err != nil {
-				return err
+			result := d.insertInterface(value.Index(i).Interface(), cmd, args...)
+			if result.Err != nil {
+				return result
 			}
 		}
 	}
-	return nil
+	return res
 }
 
-func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) (int64, error) {
+func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) Result {
 	// 插入到args之前  dest 是struct或切片的指针
 	values := make([]interface{}, 0)
 	keys := make([]string, 0)
@@ -527,12 +543,12 @@ func InToSql(cmd string, args ...interface{}) string {
 	return cmd
 }
 
-func (d *Db) UpdateInterface(dest interface{}, cmd string, args ...interface{}) (int64, error) {
+func (d *Db) UpdateInterface(dest interface{}, cmd string, args ...interface{}) Result {
 	// $set 固定位置固定值
 	// db.UpdateInterface(&value, "update test set $set where id=1")
 	// 插入到args之前  dest 是struct或切片的指针
 	if !strings.Contains(cmd, "$set") {
-		return 0, errors.New("not found placeholders $set")
+		return Result{Err: errors.New("not found placeholders $set")}
 	}
 
 	// ？号
@@ -545,7 +561,7 @@ func (d *Db) UpdateInterface(dest interface{}, cmd string, args ...interface{}) 
 	}
 
 	if typ.Kind() != reflect.Struct {
-		return 0, errors.New("dest must ptr or struct ")
+		return Result{Err: errors.New("dest must ptr or struct")}
 	}
 	values := make([]interface{}, 0)
 	keys := make([]string, 0)
@@ -637,3 +653,120 @@ func (d *Db) UpdateInterface(dest interface{}, cmd string, args ...interface{}) 
 	newargs := append(values, args...)
 	return d.Update(cmd, newargs...)
 }
+
+// func (d *Db) ReplaceInterface(dest interface{}, cmd string, args ...interface{}) Result {
+
+// 	// $set 固定位置固定值
+// 	// db.UpdateInterface(&value, "update test set $set where id=1")
+// 	// 插入到args之前  dest 是struct或切片的指针
+// 	res := Result{
+// 		Sql: ToSql(cmd, args...),
+// 	}
+// 	if !strings.Contains(cmd, "$set") {
+// 		res.Err = errors.New("not found placeholders $set")
+// 		return res
+// 	}
+
+// 	// ？号
+// 	typ := reflect.TypeOf(dest)
+// 	value := reflect.ValueOf(dest)
+
+// 	if typ.Kind() == reflect.Ptr {
+// 		value = value.Elem()
+// 		typ = typ.Elem()
+// 	}
+
+// 	if typ.Kind() != reflect.Struct {
+// 		res.Err = errors.New("dest must ptr or struct")
+// 		return res
+// 	}
+// 	values := make([]interface{}, 0)
+// 	keys := make([]string, 0)
+// 	// 如果是struct， 执行插入
+// 	for i := 0; i < value.NumField(); i++ {
+// 		key := typ.Field(i).Tag.Get("db")
+// 		if key == "" {
+// 			continue
+// 		}
+// 		signs := strings.Split(key, ",")
+// 		kind := value.Field(i).Kind()
+// 		switch kind {
+// 		case reflect.String:
+// 			if value.Field(i).Interface().(string) == "" && !strings.Contains(key, "force") {
+// 				continue
+// 			}
+// 			keys = append(keys, signs[0]+"=?")
+// 			values = append(values, value.Field(i).Interface())
+// 		case reflect.Int64, reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32:
+// 			if value.Field(i).Int() == 0 && !strings.Contains(key, "force") {
+// 				continue
+// 			}
+// 			keys = append(keys, signs[0]+"=?")
+// 			values = append(values, value.Field(i).Interface())
+// 		case reflect.Float32, reflect.Float64:
+// 			if value.Field(i).Float() == 0 && !strings.Contains(key, "force") {
+// 				continue
+// 			}
+// 			keys = append(keys, signs[0]+"=?")
+// 			values = append(values, value.Field(i).Interface())
+// 		case reflect.Uint64, reflect.Uint, reflect.Uint16, reflect.Uint8, reflect.Uint32:
+// 			if value.Field(i).Uint() == 0 && !strings.Contains(key, "force") {
+// 				continue
+// 			}
+// 			keys = append(keys, signs[0]+"=?")
+// 			values = append(values, value.Field(i).Interface())
+// 		case reflect.Bool:
+// 			keys = append(keys, signs[0]+"=?")
+// 			values = append(values, value.Field(i).Interface())
+// 		case reflect.Slice:
+// 			if value.Field(i).IsNil() {
+// 				if !strings.Contains(key, "force") {
+// 					continue
+// 				}
+// 				keys = append(keys, signs[0]+"=?")
+// 				values = append(values, "")
+// 			} else {
+// 				if value.Field(i).Len() == 0 && !strings.Contains(key, "force") {
+// 					continue
+// 				}
+// 				keys = append(keys, signs[0]+"=?")
+// 				send, err := json.Marshal(value.Field(i).Interface())
+// 				if err != nil {
+// 					values = append(values, "")
+// 					continue
+// 				}
+// 				values = append(values, send)
+// 			}
+// 		case reflect.Ptr:
+// 			if value.Field(i).IsNil() {
+// 				if !strings.Contains(key, "force") {
+// 					continue
+// 				}
+// 				keys = append(keys, signs[0]+"=?")
+// 				values = append(values, "")
+// 			} else {
+// 				keys = append(keys, signs[0]+"=?")
+// 				send, err := json.Marshal(value.Field(i).Interface())
+// 				if err != nil {
+// 					values = append(values, "")
+// 					continue
+// 				}
+// 				values = append(values, send)
+// 			}
+// 		case reflect.Struct, reflect.Interface:
+// 			keys = append(keys, signs[0]+"=?")
+// 			send, err := json.Marshal(value.Field(i).Interface())
+// 			if err != nil {
+// 				values = append(values, "")
+// 				continue
+// 			}
+// 			values = append(values, send)
+// 		default:
+// 			fmt.Println("not support , you can add issue: ", kind)
+// 		}
+// 	}
+
+// 	cmd = strings.Replace(cmd, "$set", strings.Join(keys, ","), 1)
+// 	newargs := append(values, args...)
+// 	return d.Update(cmd, newargs...)
+// }

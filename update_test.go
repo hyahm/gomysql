@@ -53,8 +53,8 @@ func TestUpdate(t *testing.T) {
 	// struct, 指针， 切片 默认值为 ""
 	// $set
 	t.Log("start update")
-	_, err = db.UpdateInterface(ps, "update person set $set where id=?", 4)
-	if err != nil {
+	res := db.UpdateInterface(ps, "update person set $set where id=?", 4)
+	if res.Err != nil {
 		t.Fatal(err)
 	}
 }
