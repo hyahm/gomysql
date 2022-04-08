@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/hyahm/golog"
 )
 
 func fill(dest interface{}, rows *sql.Rows) error {
@@ -251,6 +253,7 @@ func insertInterfaceSql(dest interface{}, cmd string, args ...interface{}) (stri
 					values = append(values, send)
 				}
 			case reflect.Struct, reflect.Interface:
+				golog.Info(value.IsZero())
 				keys = append(keys, signs[0])
 				placeholders = append(placeholders, "?")
 				send, err := json.Marshal(value.Field(i).Interface())
@@ -302,6 +305,7 @@ func updateInterfaceSql(dest interface{}, cmd string, args ...interface{}) (stri
 		signs := strings.Split(key, ",")
 		kind := value.Field(i).Kind()
 		switch kind {
+
 		case reflect.String:
 			if value.Field(i).Interface().(string) == "" && !strings.Contains(key, "force") {
 				continue
@@ -312,8 +316,13 @@ func updateInterfaceSql(dest interface{}, cmd string, args ...interface{}) (stri
 			if value.Field(i).Int() == 0 && !strings.Contains(key, "force") {
 				continue
 			}
-			keys = append(keys, signs[0]+"=?")
+			if strings.Contains(key, "counter") {
+				keys = append(keys, fmt.Sprintf("%s=%s+?", signs[0], signs[0]))
+			} else {
+				keys = append(keys, signs[0]+"=?")
+			}
 			values = append(values, value.Field(i).Interface())
+
 		case reflect.Float32, reflect.Float64:
 			if value.Field(i).Float() == 0 && !strings.Contains(key, "force") {
 				continue
@@ -348,6 +357,7 @@ func updateInterfaceSql(dest interface{}, cmd string, args ...interface{}) (stri
 				}
 				values = append(values, send)
 			}
+			golog.Info(signs[0])
 		case reflect.Ptr:
 			if value.Field(i).IsNil() {
 				if !strings.Contains(key, "force") {
@@ -365,12 +375,19 @@ func updateInterfaceSql(dest interface{}, cmd string, args ...interface{}) (stri
 				values = append(values, send)
 			}
 		case reflect.Struct, reflect.Interface:
+			golog.Info(signs[0])
+			golog.Info(reflect.TypeOf(value.Field(i).Interface()))
+			golog.Info(reflect.DeepEqual(value, reflect.ValueOf(reflect.TypeOf(value.Field(i).Interface()))))
 			keys = append(keys, signs[0]+"=?")
+			if value.Field(i).Interface() == nil {
+				golog.Info("nil")
+			}
 			send, err := json.Marshal(value.Field(i).Interface())
 			if err != nil {
 				values = append(values, "")
 				continue
 			}
+			golog.Info(string(send))
 			values = append(values, send)
 		default:
 			fmt.Println("not support , you can add issue: ", kind)

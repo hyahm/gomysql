@@ -104,7 +104,8 @@ func (d *Db) Update(cmd string, args ...interface{}) Result {
 	res := Result{
 		Sql: ToSql(cmd, args...),
 	}
-	result, err := d.ExecContext(d.Ctx, cmd, args...)
+
+	result, err := d.ExecContext(d.Ctx, res.Sql)
 	if err != nil {
 		res.Err = err
 		d.execError(err, res.Sql)

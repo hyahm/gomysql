@@ -3,6 +3,8 @@ package gomysql
 import (
 	"reflect"
 	"testing"
+
+	"github.com/hyahm/golog"
 )
 
 func TestInt(t *testing.T) {
@@ -23,7 +25,13 @@ func TestInt(t *testing.T) {
 
 }
 
+func TestStruct(t *testing.T) {
+	p := Person{}
+	t.Log(reflect.DeepEqual(p, Person{}))
+}
+
 func TestUpdate(t *testing.T) {
+	defer golog.Sync()
 	conf := Sqlconfig{
 		UserName:        "test",
 		Password:        "123456",
@@ -40,21 +48,23 @@ func TestUpdate(t *testing.T) {
 		FirstName: "what is it",
 		LastName:  "hyahm.com",
 		Email:     "aaaaa@eaml.com",
-		Me: MeStruct{
-			X: 10,
-			Y: 20,
-			Z: 30,
-		},
+		// Me: MeStruct{
+		// 	X: 10,
+		// 	Y: 20,
+		// 	Z: 30,
+		// },
 		Uids: []int64{1},
+		Age:  1,
 	}
 
 	// $key  $value 是固定占位符
 	// omitempty: 如果为空， 那么为数据库的默认值
 	// struct, 指针， 切片 默认值为 ""
 	// $set
-	t.Log("start update")
 	res := db.UpdateInterface(ps, "update person set $set where id=?", 4)
+	golog.Info(res.Sql)
 	if res.Err != nil {
 		t.Fatal(err)
 	}
+
 }

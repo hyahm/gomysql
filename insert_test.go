@@ -11,13 +11,14 @@ type MeStruct struct {
 }
 
 type Person struct {
-	ID        int64    `db:"id,omitempty"`
+	ID        int64    `db:"id,default"`
 	FirstName string   `db:"first_name,force"`
 	LastName  string   `db:"last_name"`
-	Email     string   `db:"email,omitempty,force"`
+	Email     string   `db:"email,force"`
 	Me        MeStruct `db:"me"`
 	Uids      []int64  `db:"uids"`
 	TestJson  string   `db:"test"`
+	Age       int      `json:"age" db:"age,counter"`
 }
 
 func TestInsert(t *testing.T) {
@@ -45,6 +46,7 @@ func TestInsert(t *testing.T) {
 		},
 		TestJson: "testaaaa",
 		Uids:     []int64{5, 7, 23, 12, 90},
+		Age:      1,
 	}
 	// pss := make([]*Person, 0)
 	// for i := 0; i < 20; i++ {
