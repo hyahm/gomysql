@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/hyahm/golog"
 )
 
 type Db struct {
@@ -105,11 +106,6 @@ func (d *Db) Flush() {
 }
 
 func (d *Db) Update(cmd string, args ...interface{}) Result {
-
-	// err := d.privateTooManyConn()
-	// if err != nil {
-	// 	return 0, err
-	// }
 	res := Result{
 		Sql: ToSql(cmd, args...),
 	}
@@ -134,6 +130,7 @@ func (d *Db) Insert(cmd string, args ...interface{}) Result {
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		res.Err = err
+		golog.Info(err)
 		d.execError(err, res.Sql)
 		return res
 	}
@@ -343,9 +340,12 @@ func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interfa
 	if typ.Kind() == reflect.Slice {
 		// 如果是切片， 那么每个值都做一次处理
 		length := value.Len()
-
+		if length == 1 {
+			return d.insertInterface(dest, cmd, args...)
+		}
 		for i := 0; i < length; i++ {
 			result := d.insertInterface(value.Index(i).Interface(), cmd, args...)
+			res.Sql += ";" + result.Sql
 			if result.Err != nil {
 				return result
 			}
@@ -360,9 +360,7 @@ func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...inte
 	// $key 和 $value 固定位置固定值
 	// ID 自增的必须设置 default
 	// db.InsertInterfaceWithoutID(&value, "insert into test($key)  values($value)")
-	res := Result{
-		Sql: ToSql(cmd, args...),
-	}
+	res := Result{}
 	if !strings.Contains(cmd, "$key") {
 		return Result{Err: errors.New("not found placeholders $key")}
 	}
@@ -384,18 +382,21 @@ func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...inte
 	if typ.Kind() == reflect.Slice {
 		// 如果是切片， 那么每个值都做一次处理
 		length := value.Len()
-
-		for i := 0; i < length; i++ {
-			result := d.insertInterface(value.Index(i).Interface(), cmd, args...)
-			if result.Err != nil {
-				return result
-			}
+		if length == 1 {
+			return d.insertInterface(dest, cmd, args...)
 		}
+
+		arguments := make([]interface{}, 0)
+		for i := 0; i < length; i++ {
+			newargs := d.insertInterfaceSql(value.Index(i).Interface(), cmd, args...)
+			arguments = append(arguments, newargs...)
+		}
+		return d.InsertMany(cmd, arguments...)
 	}
 	return res
 }
 
-func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) Result {
+func (d *Db) insertInterfaceSql(dest interface{}, cmd string, args ...interface{}) []interface{} {
 	// 插入到args之前  dest 是struct或切片的指针
 	values := make([]interface{}, 0)
 	keys := make([]string, 0)
@@ -415,7 +416,6 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 			key := typ.Field(i).Tag.Get("db")
 			if key == "" {
 				continue
-
 			}
 			signs := strings.Split(key, ",")
 			kind := value.Field(i).Kind()
@@ -508,6 +508,12 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 	cmd = strings.Replace(cmd, "$key", strings.Join(keys, ","), 1)
 	cmd = strings.Replace(cmd, "$value", strings.Join(placeholders, ","), 1)
 	newargs := append(values, args...)
+	return newargs
+}
+
+func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) Result {
+	// 插入到args之前  dest 是struct或切片的指针
+	newargs := d.insertInterfaceSql(dest, cmd, args...)
 	return d.Insert(cmd, newargs...)
 }
 

@@ -363,9 +363,12 @@ func (t *Tx) InsertInterfaceWithID(dest interface{}, cmd string, args ...interfa
 	if typ.Kind() == reflect.Slice {
 		// 如果是切片， 那么每个值都做一次处理
 		length := value.Len()
-
+		if length == 1 {
+			return t.insertInterface(dest, cmd, args...)
+		}
 		for i := 0; i < length; i++ {
 			result := t.insertInterface(value.Index(i).Interface(), cmd, args...)
+			res.Sql += ";" + result.Sql
 			if result.Err != nil {
 				return res
 			}
@@ -400,18 +403,20 @@ func (t *Tx) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...inte
 	if typ.Kind() == reflect.Slice {
 		// 如果是切片， 那么每个值都做一次处理
 		length := value.Len()
-
-		for i := 0; i < length; i++ {
-			result := t.insertInterface(value.Index(i).Interface(), cmd, args...)
-			if result.Err != nil {
-				return result
-			}
+		if length == 1 {
+			return t.insertInterface(dest, cmd, args...)
 		}
+		arguments := make([]interface{}, 0)
+		for i := 0; i < length; i++ {
+			newargs := t.insertInterfaceSql(value.Index(i).Interface(), cmd, args...)
+			arguments = append(arguments, newargs...)
+		}
+		return t.InsertMany(cmd, arguments...)
 	}
 	return Result{Err: nil}
 }
 
-func (t *Tx) insertInterface(dest interface{}, cmd string, args ...interface{}) Result {
+func (t *Tx) insertInterfaceSql(dest interface{}, cmd string, args ...interface{}) []interface{} {
 	// 插入到args之前  dest 是struct或切片的指针
 	values := make([]interface{}, 0)
 	keys := make([]string, 0)
@@ -511,6 +516,11 @@ func (t *Tx) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 	cmd = strings.Replace(cmd, "$key", strings.Join(keys, ","), 1)
 	cmd = strings.Replace(cmd, "$value", strings.Join(placeholders, ","), 1)
 	newargs := append(values, args...)
+	return newargs
+}
+
+func (t *Tx) insertInterface(dest interface{}, cmd string, args ...interface{}) Result {
+	newargs := t.insertInterfaceSql(dest, cmd, args...)
 	return t.Insert(cmd, newargs...)
 }
 

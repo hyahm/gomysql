@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hyahm/golog"
 	"github.com/hyahm/gomysql"
 )
 
@@ -29,18 +30,37 @@ var (
 )
 
 func main() {
-
+	defer golog.Sync()
 	db, err := conf.NewDb()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	db.NewCurder(User{})
-	// cate := &User{}
-	res := db.Insert("INSERT INTO user (username, password) VALUES ('77tom', '123') ON DUPLICATE KEY UPDATE username='tom', password='123';")
-	// _, err = db.ReplaceInterface(&cate, "INSERT INTO user ($key) VALUES ($value) ON DUPLICATE KEY UPDATE $set")
+	curd := db.NewCurder("user")
+	user := make([]User, 0)
+	user = append(user, User{
+		Username: "jack1",
+		Password: "97979",
+	})
+
+	user = append(user, User{
+		Username: "jack2",
+		Password: "979792",
+	})
+
+	res := curd.Create(user)
+
 	if res.Err != nil {
-		log.Fatal(err)
+		log.Fatal(res.Err)
 	}
+	fmt.Println(res.Sql)
 	fmt.Println(res.LastInsertId)
+	fmt.Println(res.LastInsertIds)
+	// cate := &User{}
+	// res := db.Insert("INSERT INTO user (username, password) VALUES ('77tom', '123') ON DUPLICATE KEY UPDATE username='tom', password='123';")
+	// // _, err = db.ReplaceInterface(&cate, "INSERT INTO user ($key) VALUES ($value) ON DUPLICATE KEY UPDATE $set")
+	// if res.Err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(res.LastInsertId)
 }
