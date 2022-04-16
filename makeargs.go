@@ -11,6 +11,10 @@ import (
 	"strings"
 )
 
+// 增加 default: 使用默认值
+// 修改： force, counter  增量器
+// 删除 修改 需要 primarykey
+
 func fill(dest interface{}, rows *sql.Rows) error {
 	value := reflect.ValueOf(dest)
 	typ := reflect.TypeOf(dest)
@@ -80,7 +84,6 @@ func fill(dest interface{}, rows *sql.Rows) error {
 					b := *(scans[v]).(*[]byte)
 					switch kind {
 					case reflect.String:
-
 						new.Field(index).SetString(string(b))
 					case reflect.Int64:
 						i64, _ := strconv.ParseInt(string(b), 10, 64)

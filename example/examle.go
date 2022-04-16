@@ -17,10 +17,10 @@ type Postparam struct {
 
 var (
 	conf = &gomysql.Sqlconfig{
-		Host:         "146.56.246.145",
+		Host:         "127.0.0.1",
 		Port:         3306,
 		UserName:     "spider",
-		Password:     "Wqox1Bp5rFZl688KSgPH1vHnqt8s",
+		Password:     "123456",
 		DbName:       "test",
 		MaxOpenConns: 10,
 		MaxIdleConns: 10,
