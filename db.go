@@ -146,17 +146,12 @@ func (d *Db) InsertMany(cmd string, args ...interface{}) Result {
 }
 
 func (d *Db) GetRows(cmd string, args ...interface{}) (*sql.Rows, error) {
+
 	return d.QueryContext(d.Ctx, cmd, args...)
 }
 
-func (d *Db) GetOne(cmd string, args ...interface{}) Result {
-	result := Result{Sql: ToSql(cmd, args...)}
-	row := d.QueryRowContext(d.Ctx, result.Sql)
-	if row.Err() != nil {
-		result.Err = row.Err()
-		return result
-	}
-	return result
+func (d *Db) GetOne(cmd string, args ...interface{}) *sql.Row {
+	return d.QueryRowContext(d.Ctx, cmd, args...)
 }
 
 func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) Result {
