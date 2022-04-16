@@ -162,7 +162,8 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) Result {
 	res := Result{Sql: ToSql(cmd, args...)}
 	rows, err := d.QueryContext(d.Ctx, res.Sql)
 	if err != nil {
-		return err
+		res.Err = err
+		return res
 	}
 	defer rows.Close()
 	// 需要设置的值
