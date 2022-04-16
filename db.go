@@ -162,8 +162,7 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) Result {
 	res := Result{Sql: ToSql(cmd, args...)}
 	rows, err := d.QueryContext(d.Ctx, res.Sql)
 	if err != nil {
-		res.Err = err
-		return res
+		return err
 	}
 	defer rows.Close()
 	// 需要设置的值
@@ -260,7 +259,15 @@ func ToSql(cmd string, args ...interface{}) string {
 	if len(args) > 0 {
 		newargs := make([]interface{}, 0, len(args))
 		for _, v := range args {
-			v = fmt.Sprintf("'%v'", v)
+			switch reflect.TypeOf(v).Kind() {
+			case reflect.Float32, reflect.Float64, reflect.Bool,
+				reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8,
+				reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint8:
+				v = fmt.Sprintf("%v", v)
+			default:
+				v = fmt.Sprintf("'%v'", v)
+			}
+
 			newargs = append(newargs, v)
 		}
 		return fmt.Sprintf(cmd, newargs...)
