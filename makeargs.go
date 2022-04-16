@@ -344,6 +344,9 @@ func updateInterfaceSql(dest interface{}, cmd string, args ...interface{}) (stri
 			}
 			values = append(values, value.Field(i).Interface())
 		case reflect.Bool:
+			if !value.Field(i).Bool() && !strings.Contains(key, "force") {
+				continue
+			}
 			keys = append(keys, signs[0]+"=?")
 			values = append(values, value.Field(i).Interface())
 		case reflect.Slice:
