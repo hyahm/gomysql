@@ -42,7 +42,7 @@ func (t *Tx) Update(cmd string, args ...interface{}) Result {
 		return res
 	}
 
-	result, err := t.tx.ExecContext(t.Ctx, res.Sql)
+	result, err := t.tx.ExecContext(t.Ctx, cmd, args...)
 	if err != nil {
 		res.Err = err
 		return res
@@ -246,6 +246,8 @@ func (t *Tx) InsertInterfaceWithID(dest interface{}, cmd string, args ...interfa
 			}
 			res.LastInsertIds = append(res.LastInsertIds, result.LastInsertId)
 		}
+	} else {
+		res.Err = ErrNotSupport
 	}
 	return res
 }
@@ -288,8 +290,9 @@ func (t *Tx) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...inte
 			arguments = append(arguments, newargs...)
 		}
 		return t.InsertMany(cmd, arguments...)
+	} else {
+		return Result{Err: ErrNotSupport}
 	}
-	return Result{Err: nil}
 }
 
 func (t *Tx) insertInterface(dest interface{}, cmd string, args ...interface{}) Result {

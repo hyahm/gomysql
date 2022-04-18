@@ -104,7 +104,7 @@ func (d *Db) Update(cmd string, args ...interface{}) Result {
 		Sql: ToSql(cmd, args...),
 	}
 
-	result, err := d.ExecContext(d.Ctx, res.Sql)
+	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		res.Err = err
 		d.execError(err, res.Sql)
@@ -159,7 +159,7 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) Result {
 	// 传入切片的地址， 根据tag 的 db 自动补充，
 	// 最求性能建议还是使用 GetRows or GetOne
 	res := Result{Sql: ToSql(cmd, args...)}
-	rows, err := d.QueryContext(d.Ctx, res.Sql)
+	rows, err := d.QueryContext(d.Ctx, cmd, args...)
 	if err != nil {
 		res.Err = err
 		return res
@@ -174,7 +174,6 @@ func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interfa
 	// $key 和 $value 固定位置固定值
 	// db.InsertInterfaceWithID(&value, "insert into test($key)  values($value)")
 	res := Result{
-		Sql:           ToSql(cmd, args...),
 		LastInsertIds: make([]int64, 0),
 	}
 
@@ -202,6 +201,8 @@ func (d *Db) InsertInterfaceWithID(dest interface{}, cmd string, args ...interfa
 			}
 			res.LastInsertIds = append(res.LastInsertIds, result.LastInsertId)
 		}
+	} else {
+		res.Err = ErrNotSupport
 	}
 	return res
 }
@@ -240,6 +241,8 @@ func (d *Db) InsertInterfaceWithoutID(dest interface{}, cmd string, args ...inte
 			arguments = append(arguments, newargs...)
 		}
 		return d.InsertMany(cmd, arguments...)
+	} else {
+		res.Err = ErrNotSupport
 	}
 	return res
 }
