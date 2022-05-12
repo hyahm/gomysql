@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -22,6 +23,7 @@ type Db struct {
 	mu        *sync.RWMutex
 	maxpacket uint64
 	maxConn   int
+	debug     bool
 }
 
 func (d *Db) execError(err error, cmd string, args ...interface{}) {
@@ -78,7 +80,7 @@ func (d *Db) Use(dbname string, overWrite ...bool) (*Db, error) {
 		WriteLogWhenFailed:      d.sc.WriteLogWhenFailed,
 		LogFile:                 d.sc.LogFile,
 	}
-	return s.conndb(s.GetMysqwlDataSource())
+	return s.conndb(s.GetMysqlDataSource())
 }
 
 func (d *Db) CreateDatabase(dbname string, overWrite bool) error {
@@ -100,10 +102,10 @@ func (d *Db) Flush() {
 }
 
 func (d *Db) Update(cmd string, args ...interface{}) Result {
-	res := Result{
-		Sql: ToSql(cmd, args...),
+	res := Result{}
+	if d.debug {
+		res.Sql = ToSql(cmd, args...)
 	}
-
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
 		res.Err = err
@@ -119,8 +121,9 @@ func (d *Db) Delete(cmd string, args ...interface{}) Result {
 }
 
 func (d *Db) Insert(cmd string, args ...interface{}) Result {
-	res := Result{
-		Sql: ToSql(cmd, args...),
+	res := Result{}
+	if d.debug {
+		res.Sql = ToSql(cmd, args...)
 	}
 	result, err := d.ExecContext(d.Ctx, cmd, args...)
 	if err != nil {
@@ -158,7 +161,10 @@ func (d *Db) Select(dest interface{}, cmd string, args ...interface{}) Result {
 	// db.Select(&value, "select * from test")
 	// 传入切片的地址， 根据tag 的 db 自动补充，
 	// 最求性能建议还是使用 GetRows or GetOne
-	res := Result{Sql: ToSql(cmd, args...)}
+	res := Result{}
+	if d.debug {
+		res.Sql = ToSql(cmd, args...)
+	}
 	rows, err := d.QueryContext(d.Ctx, cmd, args...)
 	if err != nil {
 		res.Err = err
@@ -259,6 +265,30 @@ func (d *Db) insertInterface(dest interface{}, cmd string, args ...interface{}) 
 // 还原sql
 func ToSql(cmd string, args ...interface{}) string {
 	cmd = strings.Replace(cmd, "?", "%v", -1)
+	if len(args) > 0 {
+		newargs := make([]interface{}, 0, len(args))
+		for _, v := range args {
+			switch reflect.TypeOf(v).Kind() {
+			case reflect.Float32, reflect.Float64, reflect.Bool,
+				reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8,
+				reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint8:
+				v = fmt.Sprintf("%v", v)
+			default:
+				v = fmt.Sprintf("'%v'", v)
+			}
+
+			newargs = append(newargs, v)
+		}
+		return fmt.Sprintf(cmd, newargs...)
+	}
+	return cmd
+}
+
+func ToPGSql(cmd string, args ...interface{}) string {
+	rexp, _ := regexp.Compile(`\$(\d)+`)
+	cmd = rexp.ReplaceAllStringFunc(cmd, func(s string) string {
+		return "%v"
+	})
 	if len(args) > 0 {
 		newargs := make([]interface{}, 0, len(args))
 		for _, v := range args {

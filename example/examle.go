@@ -2,29 +2,6 @@ package main
 
 import (
 	"log"
-
-	"github.com/hyahm/gomysql"
-)
-
-type User struct {
-	Id       int64  `json:"id" db:"id,omitempty"`
-	Username string `json:"username" db:"username"` // 分类英文名， 文件夹命名 唯一索引
-	Password string `json:"password" db:"password"`
-}
-
-type Postparam struct {
-}
-
-var (
-	conf = &gomysql.Sqlconfig{
-		Host:         "127.0.0.1",
-		Port:         3306,
-		UserName:     "spider",
-		Password:     "123456",
-		DbName:       "test",
-		MaxOpenConns: 10,
-		MaxIdleConns: 10,
-	}
 )
 
 type MeStruct struct {
@@ -45,7 +22,7 @@ type Person struct {
 }
 
 func main() {
-	db, err := conf.NewDb()
+	db, err := conf.NewMysqlDb()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +48,7 @@ func main() {
 	if res.Err != nil {
 		log.Fatal(res.Err)
 	}
-
+	db.Select()
 	// cate := &User{}
 	// res := db.Insert("INSERT INTO user (username, password) VALUES ('77tom', '123') ON DUPLICATE KEY UPDATE username='tom', password='123';")
 	// // _, err = db.ReplaceInterface(&cate, "INSERT INTO user ($key) VALUES ($value) ON DUPLICATE KEY UPDATE $set")

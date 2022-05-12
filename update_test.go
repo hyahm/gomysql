@@ -37,7 +37,7 @@ func TestUpdate(t *testing.T) {
 		Host:            "192.168.50.250",
 		MultiStatements: true,
 	}
-	db, err := conf.NewDb()
+	db, err := conf.NewMysqlDb()
 	if err != nil {
 		t.Fatal(err)
 	}

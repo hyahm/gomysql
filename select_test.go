@@ -47,7 +47,7 @@ func TestSelect(t *testing.T) {
 		Host:            "192.168.101.4",
 		MultiStatements: true,
 	}
-	db, err := conf.NewDb()
+	db, err := conf.NewMysqlDb()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestSelect1(t *testing.T) {
 		Host:            "192.168.101.4",
 		MultiStatements: true,
 	}
-	db, err := conf.NewDb()
+	db, err := conf.NewMysqlDb()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestMysql8(t *testing.T) {
 		LogFile: ".failedlinux.sql",
 	}
 	ch := make(chan int, Num)
-	db, err := conf.NewDb()
+	db, err := conf.NewMysqlDb()
 	if err != nil {
 		os.Exit(1)
 	}
@@ -148,7 +148,7 @@ func TestSelect2(t *testing.T) {
 		Host:            "192.168.101.4",
 		MultiStatements: true,
 	}
-	db, err := conf.NewDb()
+	db, err := conf.NewMysqlDb()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +174,7 @@ func TestSelect3(t *testing.T) {
 		Host:            "192.168.101.4",
 		MultiStatements: true,
 	}
-	db, err := conf.NewDb()
+	db, err := conf.NewMysqlDb()
 	if err != nil {
 		t.Fatal(err)
 	}

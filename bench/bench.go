@@ -40,7 +40,7 @@ func Insert8(wg *sync.WaitGroup) {
 		LogFile:            ".failedlinux.sql",
 	}
 	ch := make(chan int, Num)
-	db, err := conf.NewDb()
+	db, err := conf.NewMysqlDb()
 	if err != nil {
 		os.Exit(1)
 	}
@@ -77,7 +77,7 @@ func Insert5(wg *sync.WaitGroup) {
 		LogFile:            ".failedwindows.sql",
 	}
 	// ch := make(chan int, Num)
-	db, err := conf.NewDb()
+	db, err := conf.NewMysqlDb()
 	if err != nil {
 		log.Fatal(err)
 	}

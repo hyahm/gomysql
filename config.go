@@ -8,6 +8,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type Sqlconfig struct {
@@ -36,9 +38,10 @@ type Sqlconfig struct {
 	ConnMaxLifetime         time.Duration // 连接池设置
 	WriteLogWhenFailed      bool
 	LogFile                 string
+	Debug                   bool // 打印sql
 }
 
-func (s *Sqlconfig) GetMysqwlDataSource() string {
+func (s *Sqlconfig) GetMysqlDataSource() string {
 	s.setDefaultConfig()
 	//判断是否是空map
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&clientFoundRows=%t&allowCleartextPasswords=%t&interpolateParams=%t&columnsWithAlias=%t&multiStatements=%t&parseTime=%t&tls=%t&readTimeout=%s&timeout=%s&allowOldPasswords=%t&loc=%s&maxAllowedPacket=%d&collation=%s&writeTimeout=%s",
@@ -46,14 +49,26 @@ func (s *Sqlconfig) GetMysqwlDataSource() string {
 	)
 }
 
+func (s *Sqlconfig) GetPostgreDataSource() string {
+	s.setpgDefaultConfig()
+	//判断是否是空map
+	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s",
+		s.UserName, s.Password, s.Host, s.Port, s.DbName,
+	)
+}
+
 // 如果tag 是空的, 那么默认dbname
-func (s *Sqlconfig) NewDb() (*Db, error) {
-	return s.conndb(s.GetMysqwlDataSource())
+func (s *Sqlconfig) NewMysqlDb() (*Db, error) {
+	return s.conndb(s.GetMysqlDataSource())
+}
+
+func (s *Sqlconfig) NewPGPool() (*PGConn, error) {
+	return s.connPg(s.GetPostgreDataSource())
 }
 
 // 不存在就创建database
 func (s *Sqlconfig) CreateDB(name string) (*Db, error) {
-	db, err := s.conndb(s.GetMysqwlDataSource())
+	db, err := s.conndb(s.GetMysqlDataSource())
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +79,37 @@ func (s *Sqlconfig) CreateDB(name string) (*Db, error) {
 	db.Close()
 
 	return newdb, err
+}
+
+func (s *Sqlconfig) connPg(conf string) (*PGConn, error) {
+	conn, err := pgxpool.Connect(context.Background(), s.GetPostgreDataSource())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err = conn.Ping(context.Background()); err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	db := &PGConn{
+		conn,
+		conf,
+		context.Background(),
+		s,
+		nil,
+		s.Debug,
+	}
+
+	if s.ReadTimeout == 0 {
+		s.ReadTimeout = time.Second * 30
+	}
+
+	// 防止开始就有很多连接，导致
+	// ch = make(chan struct{}, db.maxConn)
+
+	return db, nil
 }
 
 func (s *Sqlconfig) conndb(conf string) (*Db, error) {
@@ -87,6 +133,7 @@ func (s *Sqlconfig) conndb(conf string) (*Db, error) {
 		nil,
 		0,
 		0,
+		s.Debug,
 	}
 
 	if s.ReadTimeout == 0 {
@@ -137,5 +184,19 @@ func (s *Sqlconfig) setDefaultConfig() {
 	if s.ReadTimeout == 0 {
 		s.ReadTimeout = time.Second * 20
 	}
+}
 
+func (s *Sqlconfig) setpgDefaultConfig() {
+	if s.UserName == "" {
+		s.UserName = "postgres"
+	}
+	if s.Host == "" {
+		s.Host = "127.0.0.1"
+	}
+	if s.Port == 0 {
+		s.Port = 5432
+	}
+	if s.DbName == "" {
+		s.DbName = "postgres"
+	}
 }

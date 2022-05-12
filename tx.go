@@ -16,6 +16,7 @@ type Tx struct {
 	sc      *Sqlconfig
 	maxConn int
 	db      *Db
+	debug   bool
 }
 
 func (d *Db) NewTx() (*Tx, error) {
@@ -30,12 +31,14 @@ func (d *Db) NewTx() (*Tx, error) {
 		d.sc,
 		d.maxConn,
 		d,
+		d.debug,
 	}, nil
 }
 
 func (t *Tx) Update(cmd string, args ...interface{}) Result {
-	res := Result{
-		Sql: ToSql(cmd, args...),
+	res := Result{}
+	if t.debug {
+		res.Sql = ToSql(cmd, args...)
 	}
 	if t.tx == nil {
 		res.Err = errors.New("some thing wrong , may be you need close or rallback")
@@ -57,8 +60,9 @@ func (t *Tx) Delete(cmd string, args ...interface{}) Result {
 }
 
 func (t *Tx) Insert(cmd string, args ...interface{}) Result {
-	res := Result{
-		Sql: ToSql(cmd, args...),
+	res := Result{}
+	if t.debug {
+		res.Sql = ToSql(cmd, args...)
 	}
 	result, err := t.tx.ExecContext(t.Ctx, cmd, args...)
 	if err != nil {
@@ -193,8 +197,9 @@ func (t *Tx) Select(dest interface{}, cmd string, args ...interface{}) Result {
 	// db.Select(&value, "select * from test")
 	// 传入切片的地址， 根据tag 的 db 自动补充，
 	// 最求性能建议还是使用 GetRows or GetOne
-	res := Result{
-		Sql: ToSql(cmd, args...),
+	res := Result{}
+	if t.debug {
+		res.Sql = ToSql(cmd, args...)
 	}
 	rows, err := t.tx.QueryContext(t.Ctx, cmd, args...)
 	if err != nil {
