@@ -461,12 +461,10 @@ func fillpg(dest interface{}, rows pgx.Rows) error {
 	for k := range vals {
 		scans[k] = &vals[k]
 	}
-	fmt.Println(scans)
 	for rows.Next() {
 		// scan into the struct field pointers and append to our results
 		err := rows.Scan(scans...)
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 
@@ -497,45 +495,38 @@ func fillpg(dest interface{}, rows pgx.Rows) error {
 					case reflect.String:
 						new.Field(index).SetString(b.(string))
 					case reflect.Int64:
-						// switch reflect.TypeOf(b).Kind() {
-						// 	case reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32
-						// }
-						// i64 := (*int64)(unsafe.Pointer(b))
-						// i64, _ := strconv.ParseInt(b.(string), 10, 64)
-						new.Field(index).Set(reflect.ValueOf(b))
+						i64, _ := strconv.ParseInt(fmt.Sprintf("%v", b), 10, 64)
+						new.Field(index).SetInt(i64)
 					case reflect.Int, reflect.Int16, reflect.Int8, reflect.Int32:
-						// i, _ := strconv.Atoi(string(b))
-						new.Field(index).Set(reflect.ValueOf(b))
+						i, _ := strconv.Atoi(fmt.Sprintf("%v", b))
+						new.Field(index).Set(reflect.ValueOf(i))
 
 					case reflect.Bool:
-						// t, _ := strconv.ParseBool(string(b))
-						new.Field(index).SetBool(b.(bool))
+						t, _ := strconv.ParseBool(fmt.Sprintf("%v", b))
+						new.Field(index).SetBool(t)
 
 					case reflect.Float32, reflect.Float64:
-						// f64, _ := strconv.ParseFloat(string(b), 32)
-						new.Field(index).SetFloat(b.(float64))
+						f64, _ := strconv.ParseFloat(fmt.Sprintf("%v", b), 32)
+						new.Field(index).SetFloat(f64)
 
 					case reflect.Struct:
-						fmt.Println(b)
-						// j := reflect.New(new.Field(index).Type())
-						// json.Unmarshal(b, j.Interface())
-						// new.Field(index).Set(j.Elem())
+						j := reflect.New(new.Field(index).Type())
+						json.Unmarshal([]byte(fmt.Sprintf("%v", b)), j.Interface())
+						new.Field(index).Set(j.Elem())
 
 					case reflect.Slice, reflect.Interface:
-						fmt.Println(b)
-						// j := reflect.New(new.Field(index).Type())
-						// err = json.Unmarshal(b, j.Interface())
-						// if err != nil {
-						// 	new.Field(index).Set(reflect.MakeSlice(new.Field(index).Type(), 0, 0))
-						// 	continue
-						// }
-						// new.Field(index).Set(j.Elem())
+						j := reflect.New(new.Field(index).Type())
+						json.Unmarshal([]byte(fmt.Sprintf("%v", b)), j.Interface())
+						if err != nil {
+							new.Field(index).Set(reflect.MakeSlice(new.Field(index).Type(), 0, 0))
+							continue
+						}
+						new.Field(index).Set(j.Elem())
 
 					case reflect.Ptr:
-						fmt.Println(b)
-						// j := reflect.New(new.Field(index).Type())
-						// json.Unmarshal(b, j.Interface())
-						// new.Field(index).Set(j)
+						j := reflect.New(new.Field(index).Type())
+						json.Unmarshal([]byte(fmt.Sprintf("%v", b)), j.Interface())
+						new.Field(index).Set(j)
 					default:
 						log.Println("not support , you can make a issue to report in https://github.com/hyahm/gomysql, kind: ", kind)
 					}

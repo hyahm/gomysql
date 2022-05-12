@@ -1,4 +1,7 @@
 # gomysql
+
+**移动到 github.com/hyahm/gosql**
+
 mysql 只是简单封装
  - [x] 支持高并发
  - [x] 支持更新和删除失败的日志记录

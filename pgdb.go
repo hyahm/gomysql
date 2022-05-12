@@ -41,6 +41,7 @@ func (d *PGConn) InsertInterfaceWithID(dest interface{}, cmd string, args ...int
 			return d.insertInterface(dest, cmd, args...)
 		}
 		for i := 0; i < length; i++ {
+
 			result := d.insertInterface(value.Index(i).Interface(), cmd, args...)
 			res.Sql += ";" + result.Sql
 			if result.Err != nil {

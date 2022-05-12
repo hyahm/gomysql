@@ -8,21 +8,20 @@ import (
 )
 
 type Account struct {
-	Id       int64  `json:"id" db:"id,omitempty"`
+	Id       int    `json:"id" db:"id,omitempty"`
 	Username string `json:"username" db:"username"` // 分类英文名， 文件夹命名 唯一索引
 	Password string `json:"password" db:"password"`
+	Gender   bool   `json:"gender" db:"gender"`
 }
 
 var (
 	conf = &gomysql.Sqlconfig{
-		Host:         "192.168.50.58",
-		Port:         5432,
-		UserName:     "test",
-		Password:     "123456",
-		DbName:       "mydb",
-		MaxOpenConns: 10,
-		MaxIdleConns: 10,
-		Debug:        true,
+		Host:     "192.168.101.13",
+		Port:     5432,
+		UserName: "test",
+		Password: "123456",
+		DbName:   "mydb",
+		Debug:    true,
 	}
 )
 
@@ -41,13 +40,14 @@ func main() {
 	// }
 	// row.Scan(&id)
 	// fmt.Println(id)
-	// account := Account{
-	// 	Username: "99999",
-	// }
-	account := make([]Account, 0)
-	// res := pg.InsertInterfaceWithID(account, "insert into account($key) values($value) returning id")
-	// fmt.Println(res.Sql)
-	// fmt.Println(res)
+	addAccount := Account{
+		Username: "99999",
+		Gender:   true,
+	}
+
+	res := pg.InsertInterfaceWithID(addAccount, "insert into account($key) values($value) returning id")
+	fmt.Println(res.Sql)
+	fmt.Println(res)
 
 	// res := pg.UpdateInterface(account, "update account set $set where id=11")
 	// fmt.Println(res.Sql)
@@ -60,7 +60,10 @@ func main() {
 	// 	fmt.Fprintf(os.Stderr, "QueryRow failed: %v\n", err)
 	// 	os.Exit(1)
 	// }
+
+	account := make([]Account, 0)
 	pg.Select(&account, "select * from account")
+	fmt.Println(account)
 	// conn.QueryRow()
 	// fmt.Println(name, weight)
 }
